@@ -2,6 +2,7 @@
 import os, sys
 import glob
 import argparse
+from pathlib import Path
 
 # ____________________________________________________________________________________________________________
 def absoluteFilePaths(directory):
@@ -12,7 +13,7 @@ def absoluteFilePaths(directory):
     return files
 
 # _____________________________________________________________________________________________________________
-def main():
+def main(base_path):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--outdir",
@@ -79,7 +80,7 @@ def main():
             outputFile = f"{storage_path}/{basename}"
             if outputFile not in list_of_outfiles:
                 print(f"{outputFile} : missing output file")
-                argts = f"{outdir} {sim_type} {config} {detectorVersion} {detectorOption} {seed} {train_or_val}"
+                argts = f"{outdir} {sim_type} {config} {detectorVersion} {detectorOption} {seed} {train_or_val} {base_path}"
                 arguments_list.append(argts)
                 jobCount += 1
                 if jobCount == 1:
@@ -112,4 +113,19 @@ def main():
 
 # _______________________________________________________________________________________
 if __name__ == "__main__":
-    main()
+
+    # Start from the directory of this script
+    script_dir = Path(__file__).resolve().parent
+    work_dir = script_dir
+
+    # Risali finché non trovi "data_creation" o arrivi alla root
+    while not (work_dir / "data_creation").is_dir() and work_dir != work_dir.parent:
+        work_dir = work_dir.parent
+
+    # Controllo
+    if not (work_dir / "data_creation").is_dir():
+        raise RuntimeError("Could not find WORK_DIR containing data_creation")
+
+    print("Project root (WORK_DIR):", work_dir)
+    
+    main(work_dir)

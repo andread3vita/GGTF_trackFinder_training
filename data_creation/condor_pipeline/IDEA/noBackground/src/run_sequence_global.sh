@@ -17,6 +17,7 @@ VERSION=${4}
 OPTION=${5} 
 SEED=${6}
 TRAIN_OR_VAL=${7}
+WORK_DIR=${8}
 
 NEV=1
 
@@ -25,12 +26,6 @@ set --
 source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh # if you need to fix a specific nightly: source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh -r your_version
 set -- "${ORIG_PARAMS[@]}"
 
-WORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-while [[ ! -d "$WORK_DIR/data_creation" && "$WORK_DIR" != "/" ]]; do
-    WORK_DIR="$(dirname "$WORK_DIR")"
-done
-
-[[ "$WORK_DIR" == "/" ]] && { echo "ERROR: could not find WORK_DIR containing data_creation"; exit 1; }
 
 TEMP_DIR=${OUTDIR}/${TYPE}/temp/
 FULLOUTDIR=${OUTDIR}/${TYPE}/${CONFIG}
