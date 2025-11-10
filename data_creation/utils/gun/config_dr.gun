@@ -1,5 +1,0 @@
-npart_range 5,6
-eta_range -0.5,0.5
-mom_range 0.5,50
-drmax 0.2
-pid_list 211,-211,11,-11

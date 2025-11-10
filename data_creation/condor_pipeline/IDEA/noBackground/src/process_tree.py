@@ -19,13 +19,16 @@ rootfile = sys.argv[1]
 reader = root_io.Reader(rootfile)
 output_file = sys.argv[2]
 
+det_version = int(sys.argv[3])
+det_option = int(sys.argv[4])
+
+
 metadata = reader.get("metadata")[0]
 
 out_root = TFile(output_file, "RECREATE")
 out_root.cd()    
 t = TTree("events", "tracking tree")
 event_number, n_hit, n_part, dic, t = initialize(t)
-
 
 event_number[0] = 0
 event_numbers = 0
@@ -40,14 +43,18 @@ for event in reader.get("events"):
     ) = gen_particles_find(event, debug)
     
     clear_dic(dic)
-    
     n_part[0] = 0
-    n_hit, dic, list_of_MCs1 = store_hit_col_CDC(
-        event,
-        n_hit,
-        dic,
-        metadata
-    )
+    
+    if (det_version == 3 and det_option == 1):
+        
+        n_hit, dic, list_of_MCs1 = store_hit_col_CDC(
+            event,
+            n_hit,
+            dic,
+            metadata
+        )
+    else:
+        print("Drift Chamber Analyser not yet implemented!")
     
     n_hit, dic, list_of_MCs2 = store_hit_col_VTX_SIW(
         event,

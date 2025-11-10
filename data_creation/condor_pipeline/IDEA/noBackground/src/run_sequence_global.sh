@@ -56,7 +56,7 @@ then
                         --inputFiles out_hepmc/out_${SEED}.hepmc \
                         --numberOfEvents $NEV \
                         --random.seed $SEED \
-                        --steeringFile  $WORK_DIR/data_creation/condor_pipeline/IDEA/noBackground/src/SteeringFile_IDEA_o1_v03.py \
+                        --steeringFile  $WORK_DIR/data_creation/condor_pipeline/IDEA/noBackground/utils/SteeringFile_IDEA_o1_v03.py \
                         --part.minimalKineticEnergy "0.00*MeV"   
             fi
 
@@ -68,7 +68,7 @@ then
                         --inputFiles out_hepmc/out_${SEED}.hepmc \
                         --numberOfEvents $NEV \
                         --random.seed $SEED \
-                        --steeringFile $WORK_DIR/data_creation/condor_pipeline/IDEA/noBackground/src/SteeringFile_IDEA_o1_v03.py \
+                        --steeringFile $WORK_DIR/data_creation/condor_pipeline/IDEA/noBackground/utils/SteeringFile_IDEA_o1_v03.py \
                         --part.userParticleHandler='' \
                         --part.keepAllParticles true 
             fi            
@@ -104,7 +104,7 @@ then
       k4run $WORK_DIR/data_creation/condor_pipeline/IDEA/noBackground/utils/runIDEAv${VERSION}o${OPTION}_trackerDigitizer.py --inputFile out_edm4hep/out_sim_edm4hep_${SEED}.root --outputFile out_digi/output_IDEA_DIGI_${SEED}.root
       echo "Digitized simulation output file path: ${TEMP_DIR}out_digi/output_IDEA_DIGI_${SEED}.root"
       
-      python $WORK_DIR/data_creation/data_processing/IDEAv${VERSION}/process_tree.py out_digi/output_IDEA_DIGI_${SEED}.root ${FULLOUTDIR}/${CONFIG}_graphs_${SEED}.root
+      python $WORK_DIR/data_creation/condor_pipeline/IDEA/noBackground/src/process_tree.py out_digi/output_IDEA_DIGI_${SEED}.root ${FULLOUTDIR}/${CONFIG}_graphs_${SEED}.root ${VERSION} ${OPTION}
 
 fi
 

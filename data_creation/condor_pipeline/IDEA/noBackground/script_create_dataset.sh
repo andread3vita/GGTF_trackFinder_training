@@ -26,6 +26,8 @@ SUB_DIR="$MAIN_DIR/idea_v${VERSION}_${OPTION}_nobackground"
 mkdir -p "$SUB_DIR"
 outdir="$SUB_DIR"
 
+mkdir -p "$BASE_DIR/data_creation/condor_pipeline/IDEA/noBackground/gun"
+
 if [[ "${VERSION}" -eq 3 ]]; then
     src_file="$FCCCONFIG/FullSim/IDEA/IDEA_o1_v03/SteeringFile_IDEA_o1_v03.py"
     dest_file="utils/SteeringFile_IDEA_o1_v03.py"
