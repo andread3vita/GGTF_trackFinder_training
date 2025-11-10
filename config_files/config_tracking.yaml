@@ -1,0 +1,91 @@
+graph_config:
+   only_hits: true
+   k: 40
+   tracking: true
+   global: true
+   VTX: true
+   vector: true
+
+custom_model_kwargs:
+   n_postgn_dense_blocks: 4
+   clust_space_norm: none
+
+
+selection:
+
+test_time_selection:
+
+new_variables:
+   hit_mask: ak.ones_like(hit_EDep)
+   part_mask: ak.ones_like(part_p)
+
+preprocess:
+  method: auto
+  data_fraction: 0.1 # data_fraction: fraction of events to use when calculating the mean/scale for the standardization
+
+inputs:
+   true_positions:
+      pad_mode: wrap
+      length: 25000
+      vars:
+         - [hit_x, null]
+         - [hit_y, null]
+         - [hit_z, null]
+
+   hits_features:
+      pad_mode: wrap
+      length: 25000
+      vars:
+         - [hit_x, null] #VX
+         - [hit_y, null] #VX
+         - [hit_z, null] #VX
+         - [leftPosition_x, null] # DC
+         - [leftPosition_y, null] # DC
+         - [leftPosition_z, null] # DC
+         - [rightPosition_x, null] # DC
+         - [rightPosition_y, null] # DC
+         - [rightPosition_z, null] # DC
+         - [hit_type, null] # VX DC
+         - [hit_cellID, null] # VX DC
+        
+
+   particle_features:
+      length: 25000
+      pad_mode: wrap
+      vars:
+         - [part_theta, null] #0
+         - [part_phi, null] #1
+         - [part_m, null] #2
+         - [part_pid, null] #3
+         - [part_id, null] #4
+         - [part_p, null] #5
+         - [part_p_t, null] #6
+         - [gen_status, null] #7
+         - [part_parent, null] #8
+  
+         
+
+   hits_labels:
+      length: 25000
+      pad_mode: wrap
+      vars:
+         - [hit_particle_index, null] 
+   
+ 
+
+
+
+   pf_mask:
+      length: 25000
+      pad_mode: constant
+      vars:
+         - [hit_mask, null]
+         - [part_mask, null]
+         - [produced_by_secondary, null] # new variable to indicate if the hit is produced by a secondary particle
+
+
+labels:
+  
+observers:
+  
+

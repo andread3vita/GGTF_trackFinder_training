@@ -1,0 +1,116 @@
+#!/bin/bash
+# the code comes from here: https://zenodo.org/records/8260741
+#SBATCH -p main
+#SBATCH --mem-per-cpu=6G
+#SBATCH --cpus-per-task=1
+#SBATCH -o logs/slurm-%x-%j-%N.out
+# set -e
+# set -x
+
+# env
+# df -h
+
+OUTDIR=${1} 
+TYPE=${2} 
+CONFIG=${3} 
+VERSION=${4} 
+OPTION=${5} 
+SEED=${6}
+TRAIN_OR_VAL=${7}
+
+NEV=1
+
+ORIG_PARAMS=("$@")
+set --
+source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh # if you need to fix a specific nightly: source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh -r your_version
+set -- "${ORIG_PARAMS[@]}"
+
+WORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+while [[ ! -d "$WORK_DIR/data_creation" && "$WORK_DIR" != "/" ]]; do
+    WORK_DIR="$(dirname "$WORK_DIR")"
+done
+
+[[ "$WORK_DIR" == "/" ]] && { echo "ERROR: could not find WORK_DIR containing data_creation"; exit 1; }
+
+TEMP_DIR=${OUTDIR}/${TYPE}/temp/
+FULLOUTDIR=${OUTDIR}/${TYPE}/${CONFIG}
+
+mkdir -p $TEMP_DIR
+cd $TEMP_DIR
+mkdir -p out_hepmc/
+mkdir -p out_edm4hep/
+mkdir -p out_digi/
+mkdir -p ${FULLOUTDIR}
+
+if [[ "${TYPE}" == "Pythia" ]]
+then 
+
+      cp $WORK_DIR/data_creation/utils/Pythia_generation/${CONFIG}.cmd ${CONFIG}_${SEED}.cmd
+      echo "Random:seed=${SEED}" >> ${CONFIG}_${SEED}.cmd
+
+      k4run $WORK_DIR/data_creation/utils/Pythia_generation/pythia.py -n $NEV --Dumper.Filename out_hepmc/out_${SEED}.hepmc --Pythia8.PythiaInterface.pythiacard ${CONFIG}_${SEED}.cmd
+      
+      if [[ $VERSION -eq 3 ]]
+      then
+
+            if [[ "${TRAIN_OR_VAL}" == "train" ]]
+            then
+
+                  ddsim --compactFile $K4GEO/FCCee/IDEA/compact/IDEA_o${OPTION}_v0${VERSION}/IDEA_o${OPTION}_v0${VERSION}.xml \
+                        --outputFile out_edm4hep/out_sim_edm4hep_${SEED}.root \
+                        --inputFiles out_hepmc/out_${SEED}.hepmc \
+                        --numberOfEvents $NEV \
+                        --random.seed $SEED \
+                        --steeringFile  $WORK_DIR/data_creation/condor_pipeline/IDEA/noBackground/src/SteeringFile_IDEA_o1_v03.py \
+                        --part.minimalKineticEnergy "0.00*MeV"   
+            fi
+
+            if [[ "${TRAIN_OR_VAL}" == "val" ]]
+            then
+
+                  ddsim --compactFile $K4GEO/FCCee/IDEA/compact/IDEA_o${OPTION}_v0${VERSION}/IDEA_o${OPTION}_v0${VERSION}.xml \
+                        --outputFile out_edm4hep/out_sim_edm4hep_${SEED}.root \
+                        --inputFiles out_hepmc/out_${SEED}.hepmc \
+                        --numberOfEvents $NEV \
+                        --random.seed $SEED \
+                        --steeringFile $WORK_DIR/data_creation/condor_pipeline/IDEA/noBackground/src/SteeringFile_IDEA_o1_v03.py \
+                        --part.userParticleHandler='' \
+                        --part.keepAllParticles true 
+            fi            
+      fi   
+
+      if [[ $VERSION -eq 2 ]]
+      then
+            if [[ "${TRAIN_OR_VAL}" == "train" ]]
+            then
+
+                  ddsim --compactFile $K4GEO/FCCee/IDEA/compact/IDEA_o${OPTION}_v0${VERSION}/IDEA_o${OPTION}_v0${VERSION}.xml \
+                        --outputFile out_edm4hep/out_sim_edm4hep_${SEED}.root \
+                        --inputFiles out_hepmc/out_${SEED}.hepmc \
+                        --numberOfEvents $NEV \
+                        --random.seed $SEED \
+                        --part.minimalKineticEnergy "0.00*MeV"
+                  
+            fi
+
+            if [[ "${TRAIN_OR_VAL}" == "val" ]]
+            then
+
+                  ddsim --compactFile $K4GEO/FCCee/IDEA/compact/IDEA_o${OPTION}_v0${VERSION}/IDEA_o${OPTION}_v0${VERSION}.xml \
+                        --outputFile out_edm4hep/out_sim_edm4hep_${SEED}.root \
+                        --inputFiles out_hepmc/out_${SEED}.hepmc \
+                        --numberOfEvents $NEV \
+                        --random.seed $SEED \
+                        --part.keepAllParticles true \
+                        --part.userParticleHandler=''
+            fi     
+      fi
+      
+      k4run $WORK_DIR/data_creation/condor_pipeline/IDEA/noBackground/utils/runIDEAv${VERSION}o${OPTION}_trackerDigitizer.py --inputFile out_edm4hep/out_sim_edm4hep_${SEED}.root --outputFile out_digi/output_IDEA_DIGI_${SEED}.root
+      echo "Digitized simulation output file path: ${TEMP_DIR}out_digi/output_IDEA_DIGI_${SEED}.root"
+      
+      python $WORK_DIR/data_creation/data_processing/IDEAv${VERSION}/process_tree.py out_digi/output_IDEA_DIGI_${SEED}.root ${FULLOUTDIR}/${CONFIG}_graphs_${SEED}.root
+
+fi
+
+

@@ -1,0 +1,13 @@
+executable    = src/run_sequence_global.sh
+            output        = std/condor.$(ClusterId).$(ProcId).out
+            error         = std/condor.$(ClusterId).$(ProcId).err
+            log           = std/condor.$(ClusterId).log
+
+            +AccountingGroup = "group_u_FCC.local_gen"
+            +JobFlavour      = "testmatch"
+            
+            RequestCpus = 3
+            arguments = $(ARGS)
+            queue ARGS from (
+            /eos/user/a/adevita/public/saveSpace/GGTF_trackFinder_training/data_train/idea_v3_1_nobackground Pythia Zcard 3 1 1 train
+)
