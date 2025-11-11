@@ -353,7 +353,7 @@ def local_to_global(local_pos, x_prime, y_prime, z_prime, wire_pos):
     global_pos = x_prime * local_pos[0] + y_prime * local_pos[1] + z_prime * local_pos[2] + wire_pos
     return global_pos
 
-def store_hit_col_CDC(
+def store_hit_col_CDC_withLR(
     event,
     n_hit,
     dic,
@@ -481,6 +481,89 @@ def store_hit_col_CDC(
         
     return n_hit, dic, list_of_MCs1
 
+def store_hit_col_CDC_withPoints(
+    event,
+    n_hit,
+    dic,
+    metadata
+):
+    
+    dc_links = event.get("DCH_DigiSimAssociationCollection")
+    dc_digi_collection = event.get("DCH_DigiCollection")
+    
+    n_hit[0] = 0
+    list_of_MCs1 = []
+    
+    for idx_link, dc_link in enumerate(dc_links):
+        
+        dc_hit = dc_link.getTo()
+        dc_hit_digi = dc_digi_collection[idx_link]
+        
+        
+        cellID = dc_hit.getCellID()
+        EDep = dc_hit.getEDep()
+        time = dc_hit.getTime()
+        
+        
+        
+        produced_by_secondary = dc_hit.isProducedBySecondary()
+        dic["leftPosition_x"].push_back(0.)
+        dic["leftPosition_y"].push_back(0.)
+        dic["leftPosition_z"].push_back(0.)
+        dic["rightPosition_x"].push_back(0.)
+        dic["rightPosition_y"].push_back(0.)
+        dic["rightPosition_z"].push_back(0.)
+        dic["produced_by_secondary"].push_back(1.0 * produced_by_secondary)
+        cluster_count = dc_hit_digi.getNClusters()
+        dic["cluster_count"].push_back(cluster_count)
+
+        pathLength = dc_hit.getPathLength()
+        
+        #  position along the wire, wire direction and drift distance
+        wirePos = dc_hit_digi.getPosition()
+        x = wirePos.x
+        y = wirePos.y
+        z = wirePos.z
+        
+        momentum = dc_hit.getMomentum()
+        px = momentum.x
+        py = momentum.y
+        pz = momentum.z
+        dic["hit_x"].push_back(x)
+        dic["hit_y"].push_back(y)
+        dic["hit_z"].push_back(z)
+        p = math.sqrt(px * px + py * py + pz * pz)
+        dic["hit_px"].push_back(px)
+        dic["hit_py"].push_back(py)
+        dic["hit_pz"].push_back(pz)
+        
+        htype = 0
+        cellid_encoding = metadata.get_parameter("DCHCollection__CellIDEncoding")
+        decoder = dd4hep.BitFieldCoder(cellid_encoding)
+        superLayer = decoder.get(cellID, "superlayer")
+        layer = decoder.get(cellID, "layer")
+        phi = decoder.get(cellID, "nphi")
+        stereo = decoder.get(cellID, "stereosign")
+        dic["hit_cellID"].push_back(cellID)
+        dic["hit_EDep"].push_back(EDep)
+        dic["hit_time"].push_back(time)
+        dic["hit_pathLength"].push_back(pathLength)
+        dic["hit_type"].push_back(htype)
+        dic["superLayer"].push_back(superLayer)
+        dic["layer"].push_back(layer)
+        dic["phi"].push_back(phi)
+        dic["stereo"].push_back(stereo)
+
+        mcParticle = dc_hit.getParticle()
+        object_id = mcParticle.getObjectID()
+        hit_particle_index = object_id.index
+        dic["hit_particle_index"].push_back(hit_particle_index)
+        list_of_MCs1.append(hit_particle_index)
+        
+        n_hit[0] += 1
+        
+    return n_hit, dic, list_of_MCs1
+             
 
 def store_hit_col_VTX_SIW(
     event,

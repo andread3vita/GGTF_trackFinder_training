@@ -44,16 +44,16 @@ pip install plotly
 
 ## 🧠 Model Training
 
-To train the model, use the script [`src/train_lightning.py`](src/train_lightning.py). This script supports extensive configuration through command-line arguments, which are defined in [`src/utils/parser_args.py`](src/utils/parser_args.py).
+To train the model, go inside `model_training/` and use the script [`src/train_lightning.py`](model_training/src/train_lightning.py). This script supports extensive configuration through command-line arguments, which are defined in [`src/utils/parser_args.py`](model_training/src/utils/parser_args.py).
 
 ### 📌 Example Command
 
 ```bash
 python -m src.train_lightning \
   --data-train Zcard_graphs_{1..100}.root \
-  --data-config config_files/config_tracking_global_vector.yaml \
+  --data-config ../config_files/config_tracking.yaml \
   -clust -clust_dim 3 \
-  --network-config src/models/wrapper/example_model_tracking_gatr_v_plot.py \
+  --network-config src/models/wrapper/model_tracking_gatr.py \
   --model-prefix training_results/ \
   --num-workers 0 \
   --gpus 0,1,2,3 \

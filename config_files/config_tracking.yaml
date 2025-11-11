@@ -75,7 +75,7 @@ inputs:
 
 
 
-   pf_mask:
+   mask:
       length: 25000
       pad_mode: constant
       vars:
