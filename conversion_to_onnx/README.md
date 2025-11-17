@@ -9,7 +9,7 @@ This can be done by following these steps:
 2. **Run the container**:  
    `apptainer shell onnxconversion_latest.sif`  
    > **Note:** Make sure the container has access to both the conversion script  
-   > (`conversion_to_onnx/onnx_conversion.py`) and the `.ckpt` file.  
+   > (`onnx_conversion.py`) and the `.ckpt` file.  
 3. **Run the conversion script**:  
    ```bash
    python onnx_conversion.py \
