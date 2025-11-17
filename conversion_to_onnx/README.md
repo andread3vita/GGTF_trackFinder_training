@@ -9,10 +9,10 @@ This can be done by following these steps:
 2. **Run the container**:  
    `apptainer shell onnxconversion_latest.sif`  
    > **Note:** Make sure the container has access to both the conversion script  
-   > (`Tracking_DC/scripts/onnx_conversion.py`) and the `.ckpt` file.  
+   > (`conversion_to_onnx/onnx_conversion.py`) and the `.ckpt` file.  
 3. **Run the conversion script**:  
    ```bash
-   python scripts/onnx_conversion.py \
+   python onnx_conversion.py \
        --weightpath <PATH_TO_CKPT_FILE> \
        --outputpath <PATH_WHERE_TO_SAVE_THE_ONNX_FILE>
    ```
