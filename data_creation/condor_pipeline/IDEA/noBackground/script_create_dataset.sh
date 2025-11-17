@@ -6,6 +6,7 @@ VERSION=${3}        # IDEA version (2 or 3)
 OPTION=${4}         # IDEA option
 NFILE=${5}          # number of files
 TRAIN_OR_VAL=${6}   # training or validation ('train' or 'val')
+USE_LR=${7}         # Use left-right positions instead of points along the wire ('True' or 'False')
 
 CURRPATH=$(pwd)
 ORIG_PARAMS=("$@")
@@ -36,5 +37,5 @@ if [[ "${VERSION}" -eq 3 ]]; then
     sed -i 's/simulateCalo *= *True/simulateCalo = False/' "$dest_file"
 fi
 
-python src/submit_jobs.py  --queue testmatch --outdir $outdir --njobs $NFILE --type $TYPE --config $CONFIG --detectorVersion $VERSION --detectorOption $OPTION --train_or_val $TRAIN_OR_VAL
+python src/submit_jobs.py  --queue testmatch --outdir $outdir --njobs $NFILE --type $TYPE --config $CONFIG --detectorVersion $VERSION --detectorOption $OPTION --train_or_val $TRAIN_OR_VAL --use_lr $USE_LR
 

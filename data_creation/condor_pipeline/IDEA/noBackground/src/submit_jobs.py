@@ -27,6 +27,7 @@ def main(base_path):
     parser.add_argument("--detectorVersion", help = "Detector Version", default = 3)
     parser.add_argument("--detectorOption", help = "Detector Option", default = 1)
     parser.add_argument("--train_or_val", help = "Dataset type", default = "train")
+    parser.add_argument("--use_lr", help = "Use left-right positions?", default = "True")
     
     parser.add_argument(
         "--queue",
@@ -54,6 +55,7 @@ def main(base_path):
     detectorVersion = int(args.detectorVersion)
     detectorOption = int(args.detectorOption)
     train_or_val = args.train_or_val
+    use_lr = args.use_lr
 
     os.makedirs(f"{outdir}/{sim_type}/{config}", exist_ok=True)
     storage_path = f"{outdir}/{sim_type}/{config}"
@@ -80,7 +82,7 @@ def main(base_path):
             outputFile = f"{storage_path}/{basename}"
             if outputFile not in list_of_outfiles:
                 print(f"{outputFile} : missing output file")
-                argts = f"{outdir} {sim_type} {config} {detectorVersion} {detectorOption} {seed} {train_or_val} {base_path}"
+                argts = f"{outdir} {sim_type} {config} {detectorVersion} {detectorOption} {seed} {train_or_val} {use_lr} {base_path}"
                 arguments_list.append(argts)
                 jobCount += 1
                 if jobCount == 1:
@@ -114,15 +116,12 @@ def main(base_path):
 # _______________________________________________________________________________________
 if __name__ == "__main__":
 
-    # Start from the directory of this script
     script_dir = Path(__file__).resolve().parent
     work_dir = script_dir
-
-    # Risali finché non trovi "data_creation" o arrivi alla root
+    
     while not (work_dir / "data_creation").is_dir() and work_dir != work_dir.parent:
         work_dir = work_dir.parent
-
-    # Controllo
+        
     if not (work_dir / "data_creation").is_dir():
         raise RuntimeError("Could not find WORK_DIR containing data_creation")
 

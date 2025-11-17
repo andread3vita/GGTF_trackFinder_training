@@ -22,7 +22,7 @@ output_file = sys.argv[2]
 
 det_version = int(sys.argv[3])
 det_option = int(sys.argv[4])
-use_left_right = bool(sys.argv[5])
+use_left_right = sys.argv[5] == "True"
 
 metadata = reader.get("metadata")[0]
 

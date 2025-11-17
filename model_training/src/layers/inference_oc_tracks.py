@@ -14,15 +14,19 @@ import sys
 from collections import Counter
 
 def hfdb_obtain_labels(X, device, eps=0.1):
-
+    # hdbscan gives -1 if noise.. 1 if +
+    # hdb = HDBSCAN(min_cluster_size=8, min_samples=8, cluster_selection_epsilon=eps).fit(
+    #     X.detach().cpu()
+    # )
     hdb = HDBSCAN(min_cluster_size=4, cluster_selection_epsilon=eps).fit(
         X.detach().cpu()
     )
-    
+    # hdb = DBSCAN(min_samples=5, eps=0.2).fit(X.detach().cpu())
     labels_hdb = hdb.labels_ + 1  # noise class goes to zero
     labels_hdb = np.reshape(labels_hdb, (-1))
     labels_hdb = torch.Tensor(labels_hdb).long().to(device)
     return labels_hdb
+
 
 def evaluate_efficiency_tracks(
     batch_g,
@@ -75,37 +79,12 @@ def evaluate_efficiency_tracks(
         else:
             if clustering_mode == "clustering_normal":
                 
-                # def describe_tensor(name, t):
-                #     print(f"Statistics for tensor '{name}':")
-                #     print(f"  Shape: {tuple(t.shape)}")
-                #     print(f"  Data type: {t.dtype}")
-                #     print(f"  Device: {t.device}")
-                #     print(f"  Number of elements: {t.numel()}")
-                #     print(f"  Mean value: {t.mean().item():.6f}")
-                #     print(f"  Standard deviation: {t.std().item():.6f}")
-                #     print(f"  Minimum value: {t.min().item():.6f}")
-                #     print(f"  Maximum value: {t.max().item():.6f}")
-                #     print(f"  Median value: {t.median().item():.6f}")
-                #     print(f"  First 5 elements: {t.flatten()[:5].tolist()}")
-                #     print()
-
-                # describe_tensor("betas", betas)
-                # describe_tensor("X", X)
-                
-                clustering1 = get_clustering(betas, X, tbeta=0.2, td=0.15)
+                clustering1 = get_clustering(betas, X, tbeta=0.6, td=0.3)
                 map_from = list(np.unique(clustering1.detach().cpu()))
                 cluster_id = map(lambda x: map_from.index(x), clustering1)
                 clustering_ordered = (
                     torch.Tensor(list(cluster_id)).long().to(model_output.device)
                 )
-                
-                # unique_vals, counts = torch.unique(clustering_ordered, return_counts=True)
-                # for val, count in zip(unique_vals.tolist(), counts.tolist()):
-                #     print(f"Value {val}: {count} occurrences")
-
-                # print(f"\nTotal elements: {clustering_ordered.numel()}")
-                
-                # sys.exit()
                 
                 if torch.unique(clustering1)[0] != -1:
                     clustering = clustering_ordered + 1
@@ -116,18 +95,12 @@ def evaluate_efficiency_tracks(
             elif clustering_mode == "dbscan":
                 labels = hfdb_obtain_labels(X, betas.device)
         
-        particle_ids = torch.unique(dic["graph"].ndata["particle_number"])
-        shower_p_unique = torch.unique(labels)
+        pids, partIndices, deltaMCs, energies, pTs, thetas, genStatus, numSIhits, numCDChits, trackLabels, hitEfficiencies, hitPurities, fakeTrackIndices, siliconHits_fakeTracks, driftHits_fakeTracks, tracks_dict, fileIDs, eventIDs, = match_tracks(labels, dic) 
         
-        pids, partIndices, deltaMCs, energies, pTs, thetas, genStatus, numSIhits, numCDChits, trackLabels, hitEfficiencies, hitPurities, fakeTrackIndices, siliconHits_fakeTracks, driftHits_fakeTracks, fileIDs, eventIDs, = match_tracks(labels, dic) 
-        
-        df_event = generate_tracks_dataframe(
-            fileIDs, eventIDs, pids, partIndices, deltaMCs, energies, pTs, thetas, genStatus, numSIhits, numCDChits, trackLabels, hitEfficiencies, hitPurities, fakeTrackIndices, siliconHits_fakeTracks, driftHits_fakeTracks)
-        
+        df_event = generate_tracks_dataframe(fileIDs, eventIDs, pids, partIndices, deltaMCs, energies, pTs, thetas, genStatus, numSIhits, numCDChits, trackLabels, hitEfficiencies, hitPurities, fakeTrackIndices, siliconHits_fakeTracks, driftHits_fakeTracks, tracks_dict)
         df_list.append(df_event)
-        
-        
-        df_hits_event = dataframe_position_labels(labels, dic) 
+
+        df_hits_event = dataframe_position_labels(labels, dic, X, betas) 
         df_hits.append(df_hits_event)
         
         if len(df_list) > 0:
@@ -190,7 +163,6 @@ def match_tracks(labels, dic):
     ]
     partInfo = {key: part_true[:, i] for i, key in enumerate(part_keys)}
     
-
     particle_number_nomap = graphInfo.ndata["particle_number_nomap"]  # particle index
 
     unique_labels, counts = torch.unique(labels, return_counts=True)
@@ -237,6 +209,37 @@ def match_tracks(labels, dic):
             purity_p[int(l)] = hits_in_label / numHits_tracks[int(l)] if numHits_tracks[int(l)] > 0 else 0.0
         efficiency[int(p)] = efficiency_p
         purity[int(p)] = purity_p
+        
+    tracks_dict = {}
+
+    for l in unique_labels:
+        track_particles = []
+        track_purities = []
+        track_efficiencies = []
+
+        for p in unique_particles:
+            eff_p_dict = efficiency.get(int(p))
+            pur_p_dict = purity.get(int(p))
+
+           
+            if eff_p_dict is None or pur_p_dict is None:
+                continue
+
+            if int(l) not in eff_p_dict or int(l) not in pur_p_dict:
+                continue
+
+            eff = eff_p_dict[int(l)]
+            pur = pur_p_dict[int(l)]
+
+            track_particles.append(int(p))
+            track_purities.append(pur)
+            track_efficiencies.append(eff)
+
+        tracks_dict[int(l)] = {
+            "particle_index": track_particles,
+            "efficiency": track_efficiencies,
+            "purity": track_purities
+        }
     
     # check if particle matches the cluster and check which clusters are not assigned
     particle_matches = {}
@@ -323,7 +326,6 @@ def match_tracks(labels, dic):
         deltaMC = 0
         # deltaMC = ...
         
-        
         pids.append(pid)
         partIndices.append(pid_int)
         energies.append(energy)
@@ -355,7 +357,7 @@ def match_tracks(labels, dic):
         fileIDs.append(fileID)
         eventIDs.append(eventID)
     
-    return pids, partIndices, deltaMCs, energies, pTs, thetas, genStatus, numSIhits, numCDChits, trackLabels, hitEfficiencies, hitPurities, fakeTrackIndices, siliconHits_fakeTracks, driftHits_fakeTracks, fileIDs, eventIDs
+    return pids, partIndices, deltaMCs, energies, pTs, thetas, genStatus, numSIhits, numCDChits, trackLabels, hitEfficiencies, hitPurities, fakeTrackIndices, siliconHits_fakeTracks, driftHits_fakeTracks, tracks_dict, fileIDs, eventIDs
 
 def generate_tracks_dataframe(
     fileIDs, 
@@ -374,7 +376,8 @@ def generate_tracks_dataframe(
     hitPurities,
     fakeTrackIndices=None,
     siliconHits_fakeTracks=None,
-    driftHits_fakeTracks=None
+    driftHits_fakeTracks=None,
+    tracks_dict = None
 ):
     """
     Create a pandas DataFrame from the outputs of match_tracks().
@@ -420,60 +423,64 @@ def generate_tracks_dataframe(
 
     df = pd.DataFrame(df_dict)
 
-    # Append fake tracks if provided
+    particle_index_list = []
+    efficiency_list = []
+    purity_list = []
+
+    for l in fakeTrackIndices:
+        
+        track_info = tracks_dict.get(int(l))
+        
+        particle_index_list.append(track_info["particle_index"])
+        efficiency_list.append(track_info["efficiency"])
+        purity_list.append(track_info["purity"])
+        
     if fakeTrackIndices is not None and len(fakeTrackIndices) > 0:
+        
         fake_df = pd.DataFrame({
-            "fileID" : [to_numpy(fileIDs[0])] * len(fakeTrackIndices),
-            "eventID" : [to_numpy(eventIDs[0])] * len(fakeTrackIndices),
-            "partIndex" : [None] * len(fakeTrackIndices),
-            "pid" : [None] * len(fakeTrackIndices),
-            "energy": [None] * len(fakeTrackIndices),
-            "pT": [None] * len(fakeTrackIndices),
-            "deltaMC": [None] * len(fakeTrackIndices),
-            "theta": [None] * len(fakeTrackIndices),
-            "genStatus": [None] * len(fakeTrackIndices),
-            "numSIhits": to_numpy(siliconHits_fakeTracks),
-            "numCDChits": to_numpy(driftHits_fakeTracks),
-            "trackLabel": to_numpy(fakeTrackIndices),
-            "hitEfficiency": [0.0] * len(fakeTrackIndices),
-            "hitPurity": [0.0] * len(fakeTrackIndices),
-        })
+            "fileID" :       [to_numpy(fileIDs[0])] * len(fakeTrackIndices),
+            "eventID" :      [to_numpy(eventIDs[0])] * len(fakeTrackIndices),
+            "partIndex" :    to_numpy(particle_index_list),
+            "pid" :          [None] * len(fakeTrackIndices),
+            "energy":        [None] * len(fakeTrackIndices),
+            "pT":            [None] * len(fakeTrackIndices),
+            "deltaMC":       [None] * len(fakeTrackIndices),
+            "theta":         [None] * len(fakeTrackIndices),
+            "genStatus":     [None] * len(fakeTrackIndices),
+            "numSIhits":     to_numpy(siliconHits_fakeTracks),
+            "numCDChits":    to_numpy(driftHits_fakeTracks),
+            "trackLabel":    to_numpy(fakeTrackIndices),
+            "hitEfficiency": to_numpy(efficiency_list),
+            "hitPurity":     to_numpy(purity_list),
+        }) 
         df = pd.concat([df, fake_df], ignore_index=True)
 
     return df
 
-def dataframe_position_labels(labels,dic):
+def dataframe_position_labels(labels, dic, X, betas):
     
     graphInfo = dic["graph"]
     
-    fileID = graphInfo.ndata["fileNumber"]
-    eventID = graphInfo.ndata["eventNumber"]
-    pos_x = graphInfo.ndata["pos_hits_xyz"][:,0]
-    pos_y = graphInfo.ndata["pos_hits_xyz"][:,1]
-    pos_z = graphInfo.ndata["pos_hits_xyz"][:,2]
-    hit_type = graphInfo.ndata["hit_type"]
-    originalParticle_afterLabel = graphInfo.ndata["particle_number_nomap"]
-    originalParticle = graphInfo.ndata["particle_number_nomap_original"]
-
-
-    def to_numpy(x):
-        if isinstance(x, torch.Tensor):
-            return x.detach().cpu().numpy()
-        return x
-    
-    df_dict = {
-        "fileID" : [to_numpy(fileID)],
-        "eventID" : [to_numpy(eventID)],
-        "pos_x" :  [to_numpy(pos_x)],
-        "pos_y" : [to_numpy(pos_y)],
-        "pos_z" : [to_numpy(pos_z)],
-        "hit_type" : [to_numpy(hit_type)],
-        "clusterID" : [to_numpy(labels)],
-        "particleLabel" : [to_numpy(originalParticle_afterLabel)],
-        "originalClusterID" : [to_numpy(originalParticle)],
-        
+    tensor_map = {
+        "fileID": graphInfo.ndata["fileNumber"],
+        "eventID": graphInfo.ndata["eventNumber"],
+        "pos_x": graphInfo.ndata["pos_hits_xyz"][:,0],
+        "pos_y": graphInfo.ndata["pos_hits_xyz"][:,1],
+        "pos_z": graphInfo.ndata["pos_hits_xyz"][:,2],
+        "hit_type": graphInfo.ndata["hit_type"],
+        "clusterID": labels,
+        "particle_number": graphInfo.ndata["particle_number_nomap"],
+        "particle_number_original": graphInfo.ndata["particle_number_nomap_original"],
+        "embedding_x": X[:,0],
+        "embedding_y": X[:,1],
+        "embedding_z": X[:,2],
+        "beta": betas
     }
-
+   
+    def to_numpy(x):
+        return x.detach().cpu().numpy() if isinstance(x, torch.Tensor) else x
+    
+    df_dict = {key: to_numpy(tensor) for key, tensor in tensor_map.items()}
     df = pd.DataFrame(df_dict)
     
     return df
@@ -532,9 +539,11 @@ def get_clustering(betas: torch.Tensor, X: torch.Tensor, tbeta=0.7, td=0.05):
         assigned_to_this_condpoint = unassigned[d < td]
         clustering[assigned_to_this_condpoint] = index_condpoint[0]
         unassigned = unassigned[~(d < td)]
+        
         # calculate indices_codpoints again
         indices_condpoints = find_condpoints(betas, unassigned, tbeta)
     return clustering
+
 
 def find_condpoints(betas, unassigned, tbeta):
     n_points = betas.size(0)

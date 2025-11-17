@@ -224,6 +224,14 @@ def create_graph_tracking_global(output, fileID, eventID, get_vtx=False, vector=
                         dim=0,
                     )
                     
+                    particle_number_nomap_original = torch.cat(
+                        (
+                            original_particle_link[mask_vtx],
+                            original_particle_link[mask_dc],
+                        ),
+                        dim=0,
+                    )
+                    
                     pos_xyz = torch.cat(
                         (features_hits[:, 0:3][mask_vtx], left_post), dim=0
                     )
@@ -269,6 +277,15 @@ def create_graph_tracking_global(output, fileID, eventID, get_vtx=False, vector=
                         ),
                         dim=0,
                     )
+                    
+                    particle_number_nomap_original = torch.cat(
+                        (
+                            original_particle_link[mask_vtx],
+                            original_particle_link[mask_dc],
+                            original_particle_link[mask_dc],
+                        ),
+                        dim=0,
+                    )
                 
                     pos_xyz = torch.cat(
                         (features_hits[:, 0:3][mask_vtx], left_post, right_post), dim=0
@@ -299,6 +316,9 @@ def create_graph_tracking_global(output, fileID, eventID, get_vtx=False, vector=
                 particle_number_nomap = torch.cat(
                     (hit_particle_link, hit_particle_link), dim=0
                 )
+                particle_number_nomap_original = torch.cat(
+                    (original_particle_link, original_particle_link), dim=0
+                )
                 pos_xyz = torch.cat((left_post, right_post), dim=0)
                 hit_type_all = torch.cat((hit_type, hit_type), dim=0)
                 
@@ -308,9 +328,9 @@ def create_graph_tracking_global(output, fileID, eventID, get_vtx=False, vector=
             g.ndata["fileNumber"] = torch.tensor([fileID] * len(hit_type_all))
             g.ndata["eventNumber"] = torch.tensor([eventID] * len(hit_type_all))
             g.ndata["hit_type"] = hit_type_all
-            g.ndata["clusterID_afterSelection"] = particle_number.to(dtype=torch.int64)
-            g.ndata["particle_index_afterSelection"] = particle_number_nomap
-            g.ndata["particle_index"] = original_particle_link
+            g.ndata["particle_number"] = particle_number.to(dtype=torch.int64)
+            g.ndata["particle_number_nomap"] = particle_number_nomap
+            g.ndata["particle_number_nomap_original"] = particle_number_nomap_original
             g.ndata["pos_hits_xyz"] = pos_xyz
             g.ndata["cellid"] = cellid
             g.ndata["is_overlay"] = is_overlay
