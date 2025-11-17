@@ -5,3 +5,4 @@ data_val/
 std/
 __pycache__/
 Pythia/
+wandb/

@@ -72,7 +72,7 @@ def create_inputs_from_table(output, get_vtx):
         cluster_id, unique_list_particles = find_cluster_id(hit_particle_link)
         unique_list_particles = torch.Tensor(unique_list_particles).to(torch.int64)
 
-        features_particles = torch.permute( torch.tensor(output["pf_vectors"][:, 0:number_part]),(1, 0))
+        features_particles = torch.permute( torch.tensor(output["particle_features"][:, 0:number_part]),(1, 0))
         y_id = features_particles[:, 4]
         mask_particles = check_unique_particles(unique_list_particles, y_id)
         y_data_graph = features_particles[mask_particles]
