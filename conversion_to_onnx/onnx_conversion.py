@@ -4,8 +4,12 @@ import os
 import sys
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
-working_dir = os.path.abspath(os.path.join(script_dir, ".."))
-sys.path.append(working_dir)
+working_dir = os.path.join(script_dir, "..")
+working_dir = os.path.abspath(working_dir)
+sys.path.append(os.path.join(working_dir, "model_training"))
+
+print(os.path.join(working_dir, "model_training"))
+
 
 from onnxscript.function_libs.torch_lib.ops import nn as _nn
 from onnxscript import opset18 as op
@@ -26,13 +30,12 @@ _nn._aten_gelu_approximate_none = _gelu_none_fix
 
 ##################################################################################
 
-from src.models.Gatr_v_update_onnx import ExampleWrapper as GravnetModel
+from src.models.Gatr_onnx import ExampleWrapper as GravnetModel
 
 parser = argparse.ArgumentParser()
 #parser arguments
-parser.add_argument("-m","--weightpath",type=str, default="",help="path to output directory")
-parser.add_argument("-m","--outputpath",type=str, default="",help="path to output directory")
-    
+parser.add_argument("-w", "--weightpath", type=str, default="", help="path to weight file")
+parser.add_argument("-o", "--outputpath", type=str, default="", help="path to output directory")
     
 original_sparse_coo = torch.sparse_coo_tensor
 
