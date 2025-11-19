@@ -35,7 +35,7 @@ parser.add_argument("-w","--weightPath",type=str, default="",help="path to weigh
 parser.add_argument("-o","--onnxPath",type=str, default="/",help="path to onnx file")   
 args = parser.parse_args()
 
-# torch.manual_seed(42)
+torch.manual_seed(42)
 input = torch.randn((30, 7), dtype=torch.float32)
 
 from src.models.Gatr_onnx import ExampleWrapper as GravnetModel
