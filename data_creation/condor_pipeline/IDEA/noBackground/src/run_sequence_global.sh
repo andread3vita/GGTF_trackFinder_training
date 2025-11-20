@@ -104,7 +104,10 @@ then
       
       k4run $WORK_DIR/data_creation/condor_pipeline/IDEA/noBackground/utils/runIDEAv${VERSION}o${OPTION}_trackerDigitizer.py --inputFile out_edm4hep/out_sim_edm4hep_${SEED}.root --outputFile out_digi/output_IDEA_DIGI_${SEED}_${TRAIN_OR_VAL}.root
       echo "Digitized simulation output file path: ${TEMP_DIR}out_digi/output_IDEA_DIGI_${SEED}_${TRAIN_OR_VAL}.root"
-      
+
+      rm -rf out_hepmc
+      rm -rf out_edm4hep
+
       python $WORK_DIR/data_creation/condor_pipeline/IDEA/noBackground/src/process_tree.py out_digi/output_IDEA_DIGI_${SEED}_${TRAIN_OR_VAL}.root ${FULLOUTDIR}/${CONFIG}_graphs_${SEED}_${TRAIN_OR_VAL}.root ${VERSION} ${OPTION} ${USE_LR}
 
 fi

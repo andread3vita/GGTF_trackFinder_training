@@ -93,6 +93,8 @@ siwrd_digitizer.ForceHitsOntoSurface = True
 dch_digitizer = DCHdigi_v02(
     "DCHdigi2",
     InputSimHitCollection=["DCHCollection"],
+    OutputDigihitCollection = ["DCH_DigiCollection"],
+    OutputLinkCollection = ["DCH_DigiSimAssociationCollection"],
     DCH_name="DCH_v2",
     zResolution_mm=1.0,             # in mm
     xyResolution_mm=0.1,            # in mm

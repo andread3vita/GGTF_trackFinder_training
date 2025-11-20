@@ -20,6 +20,7 @@ from src.gatr_v111.interface import (
     embed_scalar,
     embed_translation,
 )
+from xformers.ops.fmha import BlockDiagonalMask
 from src.gatr_v111.primitives.invariants import   compute_inner_product_mask
 from src.gatr_v111.primitives.linear import _compute_pin_equi_linear_basis
 from src.gatr_v111.primitives.attention import _build_dist_basis
