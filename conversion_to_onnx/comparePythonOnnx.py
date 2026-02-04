@@ -4,6 +4,7 @@ import os
 import sys
 import onnxruntime as ort
 import numpy as np
+import re
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.join(this_dir, "..")
@@ -35,8 +36,26 @@ parser.add_argument("-w","--weightPath",type=str, default="",help="path to weigh
 parser.add_argument("-o","--onnxPath",type=str, default="/",help="path to onnx file")   
 args = parser.parse_args()
 
-torch.manual_seed(42)
-input = torch.randn((30, 7), dtype=torch.float32)
+#torch.manual_seed(42)
+#input = torch.randn((30, 7), dtype=torch.float32)
+
+def load_elements(path):
+    rows = []
+
+    with open(path, "r") as f:
+        for line in f:
+            # cerca tutto ciò che sta tra [ ... ]
+            m = re.search(r"\[([^\]]+)\]", line)
+            if not m:
+                continue
+
+            # prendi la stringa dei numeri e splittala
+            nums = [float(x.strip()) for x in m.group(1).split(",")]
+            rows.append(nums)
+
+    return torch.tensor(rows, dtype=torch.float32)
+
+input = load_elements("/afs/cern.ch/work/a/adevita/public/GGTF_trackFinder_training/conversion_to_onnx/inputs_dump_cluster.txt")
 
 from src.models.Gatr_onnx import ExampleWrapper as GravnetModel
 
@@ -50,12 +69,14 @@ model = GravnetModel.load_from_checkpoint(
     dev='cpu',
     map_location=torch.device("cpu"))
 
+model.to("cpu") 
 model.eval()
-
 
 with torch.no_grad():
     output_torch = model(input)
     
+# print(output_torch)
+  
 # output from ONNX model
 input_np = input.numpy().astype(np.float32)
 sess_options = ort.SessionOptions()

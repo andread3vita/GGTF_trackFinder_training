@@ -13,7 +13,7 @@ from src.gatr_v111.layers.attention.config import SelfAttentionConfig
 from src.gatr_v111.layers.gatr_block import GATrBlock
 from src.gatr_v111.layers.linear import EquiLinear
 from src.gatr_v111.layers.mlp.config import MLPConfig
-
+import sys
 
 class GATr(nn.Module):
     """GATr network for a data with a single token dimension.
@@ -156,6 +156,8 @@ class GATr(nn.Module):
         additional_qk_features_s = None
         # Pass through the blocks
         h_mv, h_s = self.linear_in(multivectors, scalars=scalars)
+        
+        idx = 0
         for block in self.blocks:
             h_mv, h_s = block(
                 h_mv,
@@ -165,6 +167,14 @@ class GATr(nn.Module):
                 additional_qk_features_s=additional_qk_features_s,
                 attention_mask=attention_mask,
             )
+            
+            idx+=1
+            
+            # if idx == 3:
+            #     print(h_mv, h_s)
+            #     print("h_mv shape:", h_mv.shape)
+            #     print("h_s shape:", h_s.shape)
+            #     sys.exit()
 
         outputs_mv, outputs_s = self.linear_out(h_mv, scalars=h_s)
 

@@ -8,6 +8,7 @@ from src.logger.logger_wandb import log_losses_wandb_tracking
 from src.layers.inference_oc_tracks import (
     evaluate_efficiency_tracks,
     store_at_batch_end,
+    store_at_batch_end_hits
 )
 from src.layers.losses import object_condensation_loss_tracking
 from src.layers.batch_operations import obtain_batch_numbers
@@ -75,11 +76,15 @@ class ExampleWrapper(L.LightningModule):  # nn.Module L.LightningModule
         filename = os.path.join(parent_dir, "gatr_utils/geometric_product.pt")
         sparse_basis = torch.load(filename).to(torch.float32)
         basis = sparse_basis.to_dense()
-        self.basis_gp = basis
+        
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        
+        self.basis_gp = basis.to(device=device)
+        
         filename = os.path.join(parent_dir, "gatr_utils/outer_product.pt")
         sparse_basis_outer = torch.load(filename).to(torch.float32)
         sparse_basis_outer = sparse_basis_outer.to_dense()
-        self.basis_outer = sparse_basis_outer
+        self.basis_outer = sparse_basis_outer.to(device=device)
 
         self.pin_basis = _compute_pin_equi_linear_basis(
             device=self.basis_gp.device, dtype=basis.dtype
@@ -92,23 +97,52 @@ class ExampleWrapper(L.LightningModule):  # nn.Module L.LightningModule
         colums_take = columns[mask.bool()]
         self.basis_gp_mask = colums_take
 
-    def forward(self,  input):  
+    def forward(self, input):  
         
         pos_hits_xyz = input[:, 0:3]
         hit_type = input[:, 3].view(-1, 1)
         vector = input[:, 4:]
-        inputs = self.ScaledGooeyBatchNorm2_1(pos_hits_xyz)
-        velocities = embed_translation(vector)
-        embedded_inputs = embed_point(inputs) + embed_scalar(hit_type) + velocities
-        embedded_inputs = embedded_inputs.unsqueeze(-2)
-        scalars = torch.zeros((inputs.shape[0], 1))
         
+        inputs = self.ScaledGooeyBatchNorm2_1(pos_hits_xyz)
+        embedded_inputs = embed_point(inputs) + embed_scalar(hit_type) + embed_translation(vector)
+        embedded_inputs = embedded_inputs.unsqueeze(-2)
+        
+        # with open("inputs_dump.txt", "w") as f:
+        #     for i, inp in enumerate(input):
+        #         arr = inp.cpu().numpy().reshape(-1) 
+
+            
+        #         formatted_vals = [
+        #             ("{:.6f}".format(x)).rstrip('0').rstrip('.') 
+        #             for x in arr
+        #         ]
+
+        #         values_str = ", ".join(formatted_vals)
+
+        #         f.write(f"Element {i} = [ {values_str} ]\n")
+        
+        scalars = torch.zeros((inputs.shape[0], 1))
         embedded_outputs, _ = self.gatr(embedded_inputs, scalars=scalars)
+        
         output = embedded_outputs[:, 0, :]
         x_cluster_coord = self.clustering(output)
         beta = self.beta(output)
+        
         x = torch.cat((x_cluster_coord, beta), dim=1)
 
+        # with open("output_dump.txt", "w") as f:
+        #     for i, inp in enumerate(x):
+        #         arr = inp.cpu().numpy().reshape(-1) 
+
+            
+        #         formatted_vals = [
+        #             ("{:.6f}".format(x)).rstrip('0').rstrip('.') 
+        #             for x in arr
+        #         ]
+
+        #         values_str = ", ".join(formatted_vals)
+
+        #         f.write(f"Element {i} = [ {values_str} ]\n")
         return x
 
     def training_step(self, batch, batch_idx):
@@ -151,9 +185,41 @@ class ExampleWrapper(L.LightningModule):  # nn.Module L.LightningModule
         hit_type = batch_g.ndata["hit_type"].view(-1, 1)
         vector = batch_g.ndata["vector"]
         input_ = torch.cat((pos_hits_xyz, hit_type, vector), dim=1)
+        
+
+        with open("inputs_dump.txt", "w") as f:
+            for i, inp in enumerate(input_):
+                arr = inp.cpu().numpy().reshape(-1) 
+
+            
+                formatted_vals = [
+                    ("{:.6f}".format(x)).rstrip('0').rstrip('.') 
+                    for x in arr
+                ]
+
+                values_str = ", ".join(formatted_vals)
+
+                f.write(f"Element {i} = [ {values_str} ]\n")
+        
         model_output = self(input_)
         dic = {}
         batch_g.ndata["model_output"] = model_output
+        dic["graph"] = batch_g
+        dic["part_true"] = y
+        
+        with open("output_dump.txt", "w") as f:
+            for i, inp in enumerate(model_output):
+                arr = inp.cpu().numpy().reshape(-1) 
+
+            
+                formatted_vals = [
+                    ("{:.6f}".format(x)).rstrip('0').rstrip('.') 
+                    for x in arr
+                ]
+
+                values_str = ", ".join(formatted_vals)
+
+                f.write(f"Element {i} = [ {values_str} ]\n")
 
         (loss, losses) = object_condensation_loss_tracking(
             batch_g,
@@ -172,6 +238,7 @@ class ExampleWrapper(L.LightningModule):  # nn.Module L.LightningModule
         )
         if self.trainer.is_global_zero:
             log_losses_wandb_tracking(True, batch_idx, 0, losses, loss, val=True)
+        
         if self.trainer.is_global_zero and self.args.predict:
             df_batch, df_hits = evaluate_efficiency_tracks(
                 batch_g,
@@ -184,13 +251,85 @@ class ExampleWrapper(L.LightningModule):  # nn.Module L.LightningModule
                 store=True,
                 predict=False,
             )
+            
             if self.args.predict:
                 if len(df_batch) > 0:
                     self.df_showers.append(df_batch)
+                    
+                if len(df_hits) > 0:
+                    self.df_showers_hits.append(df_hits)
+
+        return loss
+
+    def test_step(self, batch, batch_idx):
+        self.validation_step_outputs = []
+        y = batch[1]
+
+        batch_g = batch[0]
+
+        pos_hits_xyz = batch_g.ndata["pos_hits_xyz"]
+        hit_type = batch_g.ndata["hit_type"].view(-1, 1)
+        vector = batch_g.ndata["vector"]
+        input_ = torch.cat((pos_hits_xyz, hit_type, vector), dim=1)
+        
+        with open("inputs_dump.txt", "w") as f:
+            for i, inp in enumerate(input_):
+                arr = inp.cpu().numpy().reshape(-1) 
+
+            
+                formatted_vals = [
+                    ("{:.6f}".format(x)).rstrip('0').rstrip('.') 
+                    for x in arr
+                ]
+
+                values_str = ", ".join(formatted_vals)
+
+                f.write(f"Element {i} = [ {values_str} ]\n")
+        
+        model_output = self(input_)
+        dic = {}
+        batch_g.ndata["model_output"] = model_output
+        dic["graph"] = batch_g
+        dic["part_true"] = y
+        
+        with open("output_dump.txt", "w") as f:
+            for i, inp in enumerate(model_output):
+                arr = inp.cpu().numpy().reshape(-1) 
+
+            
+                formatted_vals = [
+                    ("{:.6f}".format(x)).rstrip('0').rstrip('.') 
+                    for x in arr
+                ]
+
+                values_str = ", ".join(formatted_vals)
+
+                f.write(f"Element {i} = [ {values_str} ]\n")
+
+        (loss, losses) = object_condensation_loss_tracking(
+            batch_g,
+            model_output,
+            y,
+            clust_loss_only=True,
+            add_energy_loss=False,
+            calc_e_frac_loss=False,
+            q_min=self.args.qmin,
+            frac_clustering_loss=self.args.frac_cluster_loss,
+            attr_weight=self.args.L_attractive_weight,
+            repul_weight=self.args.L_repulsive_weight,
+            fill_loss_weight=self.args.fill_loss_weight,
+            use_average_cc_pos=self.args.use_average_cc_pos,
+            tracking=True,
+        )
+        if self.trainer.is_global_zero:
+            log_losses_wandb_tracking(True, batch_idx, 0, losses, loss, val=True)
+        
+        return loss
 
     def on_validation_epoch_start(self):
         self.make_mom_zero()
         self.df_showers = []
+        self.df_showers_hits = []
         self.df_showers_pandora = []
         self.df_showes_db = []
 
@@ -203,6 +342,15 @@ class ExampleWrapper(L.LightningModule):  # nn.Module L.LightningModule
             store_at_batch_end(
                 self.args.model_prefix + "showers_df_evaluation",
                 self.df_showers,
+                0,
+                0,
+                0,
+                predict=True,
+            )
+            
+            store_at_batch_end_hits(
+                self.args.model_prefix + "showers_df_evaluation",
+                self.df_showers_hits,
                 0,
                 0,
                 0,

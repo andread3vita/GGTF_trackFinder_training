@@ -78,7 +78,7 @@ def main(base_path):
     for job in range(njobs):
         if job > discard_events:
             seed = str(job + 1)
-            basename = f"{config}_graphs_{seed}.root"
+            basename = f"{config}_graphs_{seed}_train.root"
             outputFile = f"{storage_path}/{basename}"
             if outputFile not in list_of_outfiles:
                 print(f"{outputFile} : missing output file")

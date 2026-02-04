@@ -24,7 +24,7 @@ NEV=500
 
 ORIG_PARAMS=("$@")
 set --
-source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh # if you need to fix a specific nightly: source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh -r your_version
+source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh -r 2025-12-21 # if you need to fix a specific nightly: source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh -r your_version
 set -- "${ORIG_PARAMS[@]}"
 
 
@@ -45,7 +45,8 @@ then
       echo "Random:seed=${SEED}" >> ${CONFIG}_${SEED}.cmd
 
       k4run $WORK_DIR/data_creation/utils/Pythia_generation/pythia.py -n $NEV --Dumper.Filename out_hepmc/out_${SEED}.hepmc --Pythia8.PythiaInterface.pythiacard ${CONFIG}_${SEED}.cmd
-      
+      rm ${CONFIG}_${SEED}.cmd
+
       if [[ $VERSION -eq 3 ]]
       then
 
@@ -101,13 +102,15 @@ then
                         --part.userParticleHandler=''
             fi     
       fi
+      rm out_hepmc/out_${SEED}.hepmc
       
       k4run $WORK_DIR/data_creation/condor_pipeline/IDEA/noBackground/utils/runIDEAv${VERSION}o${OPTION}_trackerDigitizer.py --inputFile out_edm4hep/out_sim_edm4hep_${SEED}.root --outputFile out_digi/output_IDEA_DIGI_${SEED}_${TRAIN_OR_VAL}.root
       echo "Digitized simulation output file path: ${TEMP_DIR}out_digi/output_IDEA_DIGI_${SEED}_${TRAIN_OR_VAL}.root"
-
-      rm -rf out_hepmc
-      rm -rf out_edm4hep
+      rm out_edm4hep/out_sim_edm4hep_${SEED}.root
 
       python $WORK_DIR/data_creation/condor_pipeline/IDEA/noBackground/src/process_tree.py out_digi/output_IDEA_DIGI_${SEED}_${TRAIN_OR_VAL}.root ${FULLOUTDIR}/${CONFIG}_graphs_${SEED}_${TRAIN_OR_VAL}.root ${VERSION} ${OPTION} ${USE_LR}
 
 fi
+
+
+
