@@ -14,6 +14,7 @@ def find_cluster_id(hit_particle_link):
     
     unique_list_particles = list(np.unique(hit_particle_link))
     if np.sum(np.array(unique_list_particles) == -1) > 0:
+        
         non_noise_idx = torch.where(hit_particle_link != -1)[0]  #
         noise_idx = torch.where(hit_particle_link == -1)[0]  #
         unique_list_particles1 = torch.unique(hit_particle_link)[1:]
@@ -24,6 +25,7 @@ def find_cluster_id(hit_particle_link):
         cluster_id = hit_particle_link.clone()
         cluster_id[non_noise_idx] = cluster_id_small
         cluster_id[noise_idx] = 0
+
     else:
         unique_list_particles1 = torch.unique(hit_particle_link)
         cluster_id = torch.searchsorted(
@@ -34,6 +36,7 @@ def find_cluster_id(hit_particle_link):
     return cluster_id, unique_list_particles
 
 def create_inputs_from_table(output, get_vtx):
+    
     graph_empty = False
     
     number_hits = np.int32(np.sum(output["mask"][0]))
@@ -63,8 +66,8 @@ def create_inputs_from_table(output, get_vtx):
     features_particles = torch.permute( torch.tensor(output["particle_features"][:, 0:number_part]),(1, 0))
     y_data_graph = features_particles
     
-    y_id = features_particles[:, 4]
-    mask_particles = check_unique_particles(unique_list_particles, y_id)
+    y_pid = features_particles[:, 4]
+    mask_particles = check_unique_particles(unique_list_particles, y_pid)
     y_data_graph = features_particles[mask_particles]
    
     if features_particles.shape[0] >= torch.sum(mask_particles).item():
@@ -73,8 +76,8 @@ def create_inputs_from_table(output, get_vtx):
         unique_list_particles = torch.Tensor(unique_list_particles).to(torch.int64)
 
         features_particles = torch.permute( torch.tensor(output["particle_features"][:, 0:number_part]),(1, 0))
-        y_id = features_particles[:, 4]
-        mask_particles = check_unique_particles(unique_list_particles, y_id)
+        y_pid = features_particles[:, 4]
+        mask_particles = check_unique_particles(unique_list_particles, y_pid)
         y_data_graph = features_particles[mask_particles]
         
         assert len(y_data_graph) == len(unique_list_particles)
@@ -94,7 +97,6 @@ def create_inputs_from_table(output, get_vtx):
             isProducedBySecondary
         ]
         return result
-
 
 def check_unique_particles(unique_list_particles, y_id):
     mask = torch.zeros_like(y_id)
@@ -125,21 +127,22 @@ def create_graph_tracking_global(output, fileID, eventID, get_vtx=False, vector=
         
         if not overlay:
             
-            remove_loopers = False
+            remove_lowEnergyParticle = False
             remove_secondary = False
             flag_secondary = True
             
-            if remove_loopers:
+            if remove_lowEnergyParticle:
+
                 # REMOVE LOOPERS
                 # Remove loopers from the list of hits and the list of particles
-                mask_not_loopers, mask_particles = remove_loopers(
+                mask_not_lowEnergy, mask_particles = remove_lowEnergyParticles(
                     hit_particle_link, y_data_graph, features_hits[:, 3:6], cluster_id
                 )
-                hit_type_one_hot = hit_type_one_hot[mask_not_loopers]
-                cluster_id = cluster_id[mask_not_loopers]
-                hit_particle_link = hit_particle_link[mask_not_loopers]
-                features_hits = features_hits[mask_not_loopers]
-                hit_type = hit_type[mask_not_loopers]
+                hit_type_one_hot = hit_type_one_hot[mask_not_lowEnergy]
+                cluster_id = cluster_id[mask_not_lowEnergy]
+                hit_particle_link = hit_particle_link[mask_not_lowEnergy]
+                features_hits = features_hits[mask_not_lowEnergy]
+                hit_type = hit_type[mask_not_lowEnergy]
                 
                 y_data_graph = y_data_graph[mask_particles]
                 
@@ -147,14 +150,15 @@ def create_graph_tracking_global(output, fileID, eventID, get_vtx=False, vector=
                 cluster_id, unique_list_particles = find_cluster_id(hit_particle_link)    
             
             if remove_secondary:
+
                 # REMOVE SECONDARY
                 # Remove loopers from the list of hits and the list of particles
-                mask_garbage, mask_particles = create_garbage_label(hit_particle_link, isProducedBySecondary, cluster_id, 3)
-                hit_type_one_hot = hit_type_one_hot[~mask_garbage]
-                cluster_id = cluster_id[~mask_garbage]
-                hit_particle_link = hit_particle_link[~mask_garbage]
-                features_hits = features_hits[~mask_garbage]
-                hit_type = hit_type[~mask_garbage]
+                mask_not_garbage, mask_particles = create_garbage_label(hit_particle_link, isProducedBySecondary, cluster_id, 3)
+                hit_type_one_hot = hit_type_one_hot[mask_garbage]
+                cluster_id = cluster_id[mask_garbage]
+                hit_particle_link = hit_particle_link[mask_garbage]
+                features_hits = features_hits[mask_garbage]
+                hit_type = hit_type[mask_garbage]
                 
                 y_data_graph = y_data_graph[mask_particles]
                 
@@ -165,8 +169,8 @@ def create_graph_tracking_global(output, fileID, eventID, get_vtx=False, vector=
                 
                 # FLAG SECONDARY
                 original_particle_link = hit_particle_link.clone()
-                mask_garbage, mask_particles = create_garbage_label(hit_particle_link, isProducedBySecondary, cluster_id, 3)
-                hit_particle_link[mask_garbage] = -1
+                mask_not_garbage, mask_particles = create_garbage_label(hit_particle_link, isProducedBySecondary, cluster_id, 3)
+                hit_particle_link[~mask_not_garbage] = -1
                 y_data_graph = y_data_graph[mask_particles]
                 cluster_id, unique_list_particles = find_cluster_id(hit_particle_link)   
             
@@ -378,12 +382,11 @@ def remove_loopers_overlay(hit_particle_link, y, coord, cluster_id):
         mask_particles = torch.tensor(np.full((len(list_p)), False, dtype=bool))
     return ~mask.to(bool), ~mask_particles.to(bool)
 
-def remove_loopers(hit_particle_link, y, coord, cluster_id):
+def remove_lowEnergyParticles(hit_particle_link, y, coord, cluster_id):
     
     unique_p_numbers = torch.unique(hit_particle_link)
     cluster_id_unique = torch.unique(cluster_id)
     
-
     min_x = scatter_min(coord[:, 0], cluster_id.long() - 1)[0]
     min_z = scatter_min(coord[:, 2], cluster_id.long() - 1)[0]
     min_y = scatter_min(coord[:, 1], cluster_id.long() - 1)[0]
@@ -488,7 +491,6 @@ def create_garbage_label(hit_particle_link, isProducedBySecondary, cluster_id, m
     list_remove = unique_p_numbers[mask_hits.view(-1)]
     
     mask_noise_hit = (torch.from_numpy(isProducedBySecondary) == 1)
-    # mask_noise_hit = torch.tensor(np.full((len(hit_particle_link)), False, dtype=bool))
     for p in unique_p_numbers:
         hits_of_p = hit_particle_link == p
         if mask_noise_hit[hits_of_p].all():
@@ -513,4 +515,4 @@ def create_garbage_label(hit_particle_link, isProducedBySecondary, cluster_id, m
     else:
         mask_particles = torch.tensor(np.full((len(list_p)), False, dtype=bool))
     
-    return mask.to(bool), ~mask_particles.to(bool)
+    return ~mask.to(bool), ~mask_particles.to(bool)

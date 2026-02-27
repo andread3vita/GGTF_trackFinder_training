@@ -145,6 +145,6 @@ def main():
 
 if __name__ == "__main__":
         
-    L.seed_everything(42, workers=True)
+    # L.seed_everything(42, workers=True)
     
     main()

@@ -504,8 +504,6 @@ def store_hit_col_CDC_withPoints(
         EDep = dc_hit.getEDep()
         time = dc_hit.getTime()
         
-        
-        
         produced_by_secondary = dc_hit.isProducedBySecondary()
         dic["leftPosition_x"].push_back(0.)
         dic["leftPosition_y"].push_back(0.)

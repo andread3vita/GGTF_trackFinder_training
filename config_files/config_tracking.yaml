@@ -48,7 +48,6 @@ inputs:
          - [hit_type, null] # VX DC
          - [hit_cellID, null] # VX DC
         
-
    particle_features:
       length: 25000
       pad_mode: wrap
@@ -63,17 +62,11 @@ inputs:
          - [gen_status, null] #7
          - [part_parent, null] #8
   
-         
-
    hits_labels:
       length: 25000
       pad_mode: wrap
       vars:
          - [hit_particle_index, null] 
-   
- 
-
-
 
    mask:
       length: 25000
@@ -81,8 +74,7 @@ inputs:
       vars:
          - [hit_mask, null]
          - [part_mask, null]
-         - [produced_by_secondary, null] # new variable to indicate if the hit is produced by a secondary particle
-
+         - [produced_by_secondary, null]
 
 labels:
   

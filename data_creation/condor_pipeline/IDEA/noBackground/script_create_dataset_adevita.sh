@@ -11,7 +11,7 @@ USE_LR=${7}         # Use left-right positions instead of points along the wire 
 CURRPATH=$(pwd)
 ORIG_PARAMS=("$@")
 set --
-source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh -r 2025-12-21   # if you need to fix a specific nightly: source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh -r your_version
+source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh -r 2026-02-26   # if you need to fix a specific nightly: source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh -r your_version
 set -- "${ORIG_PARAMS[@]}"
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -25,16 +25,18 @@ mkdir -p "$MAIN_DIR"
 
 SUB_DIR="$MAIN_DIR/idea_v${VERSION}_${OPTION}_nobackground"
 mkdir -p "$SUB_DIR"
-outdir="/eos/experiment/fcc/users/a/adevita/idea_v3_o1_newDigi"
+outdir="/eos/experiment/fcc/users/a/adevita/training_dataset"
 
 mkdir -p "$BASE_DIR/data_creation/condor_pipeline/IDEA/noBackground/gun"
 
 if [[ "${VERSION}" -eq 3 ]]; then
-    src_file="$FCCCONFIG/FullSim/IDEA/IDEA_o1_v03/SteeringFile_IDEA_o1_v03.py"
-    dest_file="utils/SteeringFile_IDEA_o1_v03.py"
 
-    cp "$src_file" "$dest_file"
-    sed -i 's/simulateCalo *= *True/simulateCalo = False/' "$dest_file"
+    STEERING_FILE=utils/SteeringFile_IDEA_o1_v03.py
+
+    src_file="$FCCCONFIG/FullSim/IDEA/IDEA_o1_v03/SteeringFile_IDEA_o1_v03.py"
+    cp "$src_file" "$STEERING_FILE"
+    sed -i 's/simulateCalo *= *True/simulateCalo = False/' "$STEERING_FILE"
+    
 fi
 
 python src/submit_jobs.py  --queue testmatch --outdir $outdir --njobs $NFILE --type $TYPE --config $CONFIG --detectorVersion $VERSION --detectorOption $OPTION --train_or_val $TRAIN_OR_VAL --use_lr $USE_LR

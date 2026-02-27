@@ -24,7 +24,7 @@ NEV=500
 
 ORIG_PARAMS=("$@")
 set --
-source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh -r 2025-12-21 # if you need to fix a specific nightly: source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh -r your_version
+source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh -r 2026-02-26 # if you need to fix a specific nightly: source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh -r your_version
 set -- "${ORIG_PARAMS[@]}"
 
 
@@ -108,7 +108,18 @@ then
       echo "Digitized simulation output file path: ${TEMP_DIR}out_digi/output_IDEA_DIGI_${SEED}_${TRAIN_OR_VAL}.root"
       rm out_edm4hep/out_sim_edm4hep_${SEED}.root
 
-      python $WORK_DIR/data_creation/condor_pipeline/IDEA/noBackground/src/process_tree.py out_digi/output_IDEA_DIGI_${SEED}_${TRAIN_OR_VAL}.root ${FULLOUTDIR}/${CONFIG}_graphs_${SEED}_${TRAIN_OR_VAL}.root ${VERSION} ${OPTION} ${USE_LR}
+      if [ "$USE_LR" = "True" ]; then
+            OUTPUT_FILE="${FULLOUTDIR}/${CONFIG}_graphs_${SEED}_${TRAIN_OR_VAL}_LR.root"
+      else
+            OUTPUT_FILE="${FULLOUTDIR}/${CONFIG}_graphs_${SEED}_${TRAIN_OR_VAL}_points.root"
+      fi
+
+      python $WORK_DIR/data_creation/condor_pipeline/IDEA/noBackground/src/process_tree.py \
+      out_digi/output_IDEA_DIGI_${SEED}_${TRAIN_OR_VAL}.root \
+      ${OUTPUT_FILE} \
+      ${VERSION} \
+      ${OPTION} \
+      ${USE_LR}
 
 fi
 
