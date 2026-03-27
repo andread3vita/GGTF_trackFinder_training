@@ -20,22 +20,18 @@ Beams:eCM = 90              ! CM energy of collision
 Beams:allowMomentumSpread  = off
 
 ! Vertex smearing :
-Beams:allowVertexSpread = on
-Beams:sigmaVertexX = 5.96e-3   !  5.96 um
-Beams:sigmaVertexY = 23.8E-6   !  23.8 nm
-Beams:sigmaVertexZ = 0.397     !  0.397 mm
+! Beams:allowVertexSpread = on
+! Beams:sigmaVertexX = 5.96e-3   !  5.96 um
+! Beams:sigmaVertexY = 23.8E-6   !  23.8 nm
+! Beams:sigmaVertexZ = 0.397     !  0.397 mm
 ! Beams:sigmaTime    = 
-
-
-WeakSingleBoson:ffbar2ffbar(s:gmZ) = on
 
 PartonLevel:ISR = on               ! initial-state radiation
 PartonLevel:FSR = on               ! final-state radiation
 
-! Decays
-!Z0
-!23:onMode = off
-!23:onIfAny = 1 2
+WeakSingleBoson:ffbar2gmZ = on
+23:onMode = off
+23:onIfAny = 1 2 3
 
 ParticleDecays:limitCylinder = on
 ParticleDecays:xyMax = 2250.

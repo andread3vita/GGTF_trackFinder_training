@@ -76,18 +76,32 @@ def main(base_path):
 
     discard_events = -1
     for job in range(njobs):
-        if job > discard_events:
-            seed = str(job + 1)
-            basename = f"{config}_graphs_{seed}_train.root"
-            outputFile = f"{storage_path}/{basename}"
-            if outputFile not in list_of_outfiles:
-                print(f"{outputFile} : missing output file")
-                argts = f"{outdir} {sim_type} {config} {detectorVersion} {detectorOption} {seed} {train_or_val} {use_lr} {base_path}"
-                arguments_list.append(argts)
-                jobCount += 1
-                if jobCount == 1:
-                    print("")
-                    print(f"rm -rf job*; ./{script} {argts}")
+
+        if job <= discard_events:
+            continue
+
+        seed = str(job + 1)
+
+        basename = f"{config}_graphs_{seed}_train*"
+        output_pattern = os.path.join(storage_path, basename)
+        matching_files = glob.glob(output_pattern)
+
+        if len(matching_files) == 0:
+
+            print(f"{output_pattern} : missing output file")
+
+            argts = (
+                f"{outdir} {sim_type} {config} "
+                f"{detectorVersion} {detectorOption} "
+                f"{seed} {train_or_val} {use_lr} {base_path}"
+            )
+
+            arguments_list.append(argts)
+            jobCount += 1
+
+            if jobCount == 1:
+                print("")
+                print(f"rm -rf job*; ./{script} {argts}")
 
     gun_name = f"gun/{sim_type}_{config}.sub"
     with open(gun_name, "w") as f:

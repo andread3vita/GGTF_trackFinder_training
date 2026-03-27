@@ -1,6 +1,6 @@
 import torch
 
-from src.models.Gatr import ExampleWrapper
+from src.models.Gatr_withModifications import ExampleWrapper
 
 
 class GraphTransformerNetWrapper(torch.nn.Module):
