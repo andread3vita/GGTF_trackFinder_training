@@ -41,7 +41,7 @@ def main(base_path):
             "testmatch",
             "nextweek",
         ],
-        default="longlunch",
+        default="espresso",
     )
 
     args = parser.parse_args()

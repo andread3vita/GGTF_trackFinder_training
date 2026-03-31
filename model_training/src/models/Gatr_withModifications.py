@@ -161,6 +161,14 @@ class ExampleWrapper(L.LightningModule):
             loss_type= self.args.loss_type,
             tracking=True,
         )
+
+        self.log(
+            "train_loss_epoch",
+            loss,
+            on_step=False,
+            on_epoch=True,
+            sync_dist=True
+        )
                 
         if torch.isnan(loss):
             print(f"Batch {batch_idx} returns NaN, skip.")
@@ -204,6 +212,17 @@ class ExampleWrapper(L.LightningModule):
             loss_type= self.args.loss_type,
             tracking=True,
         )
+
+
+        self.log(
+            "val_loss",
+            loss,
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+            sync_dist=True
+        )
+
         if self.trainer.is_global_zero:
             log_losses_wandb_tracking(True, batch_idx, 0, losses, loss, val=True)
             
@@ -259,15 +278,37 @@ class ExampleWrapper(L.LightningModule):
                 predict=True,
             )
 
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.args.start_lr)
+    # def configure_optimizers(self):
+    #     optimizer = torch.optim.Adam(self.parameters(), lr=self.args.start_lr)
         
+    #     return {
+    #         "optimizer": optimizer,
+    #         "lr_scheduler": {
+    #             "scheduler": StepLR(optimizer, step_size=4, gamma=0.1),
+    #             "interval": "epoch",
+    #             "monitor": "train_loss_epoch",
+    #             "frequency": 1,
+    #         },
+    #     }
+
+
+    def configure_optimizers(self):
+
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.args.start_lr)
+
+        scheduler = ReduceLROnPlateau(
+            optimizer,
+            mode='min',
+            factor=0.5,
+            patience=3,
+            threshold=1e-3,
+            verbose=True
+        )
+
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
-                "scheduler": StepLR(optimizer, step_size=4, gamma=0.1),
-                "interval": "epoch",
-                "monitor": "train_loss_epoch",
-                "frequency": 1,
+                "scheduler": scheduler,
+                "monitor": "val_loss",
             },
         }
