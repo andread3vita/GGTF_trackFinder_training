@@ -217,6 +217,7 @@ def create_graph_tracking_global(output, fileID, eventID, get_vtx=False, vector=
             
             if get_vtx:
                 if vector_like_data:
+
                     particle_number = torch.cat(
                         (cluster_id[mask_vtx], cluster_id[mask_dc]), dim=0
                     )
@@ -239,13 +240,24 @@ def create_graph_tracking_global(output, fileID, eventID, get_vtx=False, vector=
                     pos_xyz = torch.cat(
                         (features_hits[:, 0:3][mask_vtx], left_post), dim=0
                     )
+
+                    # pos_xyz = torch.cat(
+                    #     (features_hits[:, 0:3][mask_vtx], features_hits[:, 0:3][mask_dc]), dim=0
+                    # )
+
                     is_overlay = torch.cat(
                         (features_hits[:,-1][mask_vtx].view(-1), features_hits[:,-1][mask_dc].view(-1)), dim=0
                     )
+
                     vector_data = torch.cat(
                         (0 * features_hits[:, 0:3][mask_vtx], right_post - left_post),
                         dim=0,
                     )
+                    # vector_data = torch.cat(
+                    #     (0 * features_hits[:, 0:3][mask_vtx], 0 * features_hits[:, 0:3][mask_dc]),
+                    #     dim=0,
+                    # )
+
                     hit_type_all = torch.cat(
                         (hit_type[mask_vtx], hit_type[mask_dc]), dim=0
                     )
@@ -294,6 +306,11 @@ def create_graph_tracking_global(output, fileID, eventID, get_vtx=False, vector=
                     pos_xyz = torch.cat(
                         (features_hits[:, 0:3][mask_vtx], left_post, right_post), dim=0
                     )
+
+                    # pos_xyz = torch.cat(
+                    #     (features_hits[:, 0:3][mask_vtx], features_hits[:, 0:3][mask_dc]), dim=0
+                    # )
+
                     hit_type_all = torch.cat(
                         (hit_type[mask_vtx], hit_type[mask_dc], hit_type[mask_dc]),
                         dim=0,

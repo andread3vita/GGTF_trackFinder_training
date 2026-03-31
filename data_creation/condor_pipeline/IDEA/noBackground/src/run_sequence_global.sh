@@ -31,7 +31,6 @@ set -- "${ORIG_PARAMS[@]}"
 TEMP_DIR=${OUTDIR}/${TYPE}/temp/
 FULLOUTDIR=${OUTDIR}/${TYPE}/${CONFIG}
 
-echo ${TEMP_DIR}
 
 mkdir -p $TEMP_DIR
 cd $TEMP_DIR

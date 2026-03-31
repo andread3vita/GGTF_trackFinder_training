@@ -142,6 +142,8 @@ class ExampleWrapper(L.LightningModule):
         hit_type = batch_g.ndata["hit_type"].view(-1, 1)
         vector = batch_g.ndata["vector"]
         input_ = torch.cat((pos_hits_xyz, hit_type, vector), dim=1)
+
+        # input_ = torch.cat((pos_hits_xyz, hit_type), dim=1)
         
         model_output = self(batch_g, input_)
 
@@ -189,6 +191,8 @@ class ExampleWrapper(L.LightningModule):
         hit_type = batch_g.ndata["hit_type"].view(-1, 1)
         vector = batch_g.ndata["vector"]
         input_ = torch.cat((pos_hits_xyz, hit_type, vector), dim=1)
+
+        # input_ = torch.cat((pos_hits_xyz, hit_type), dim=1)
         
         model_output = self(batch_g, input_)
         dic = {}
