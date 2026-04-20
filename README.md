@@ -49,7 +49,7 @@ To train the model, go inside `model_training/` and use the script [`src/train_l
 ### 📌 Example Command
 
 ```bash
-python -m src.train_lightning \
+torchrun --nproc_per_node=4 -m src.train_lightning \
   --data-train Zcard_graphs_{1..100}.root \
   --data-config ../config_files/config_tracking.yaml \
   -clust -clust_dim 3 \
