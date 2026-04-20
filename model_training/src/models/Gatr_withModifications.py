@@ -2,12 +2,13 @@ import torch
 import torch.nn as nn
 import os
 import lightning as L
-from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from src.logger.logger_wandb import log_losses_wandb_tracking
 from src.layers.inference_oc_tracks import (
     evaluate_efficiency_tracks,
     store_at_batch_end,
+    store_at_batch_end_hits
 )
 from src.layers.losses import object_condensation_loss_tracking
 from src.layers.batch_operations import obtain_batch_numbers
@@ -206,6 +207,15 @@ class ExampleWrapper(L.LightningModule):
         )
         if self.trainer.is_global_zero:
             log_losses_wandb_tracking(True, batch_idx, 0, losses, loss, val=True)
+
+        self.log(
+            "val_loss",
+            loss,
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+            sync_dist=True
+        )
             
         if self.trainer.is_global_zero and self.args.predict:
             df_batch, df_hits = evaluate_efficiency_tracks(
@@ -260,14 +270,22 @@ class ExampleWrapper(L.LightningModule):
             )
 
     def configure_optimizers(self):
+
         optimizer = torch.optim.Adam(self.parameters(), lr=self.args.start_lr)
-        
+
+        scheduler = ReduceLROnPlateau(
+            optimizer,
+            mode='min',
+            factor=0.5,
+            patience=3,
+            threshold=1e-3,
+            verbose=True
+        )
+
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
-                "scheduler": StepLR(optimizer, step_size=4, gamma=0.1),
-                "interval": "epoch",
-                "monitor": "train_loss_epoch",
-                "frequency": 1,
+                "scheduler": scheduler,
+                "monitor": "val_loss",
             },
         }

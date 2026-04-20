@@ -14,7 +14,6 @@ import wandb
 import warnings
 import random
 
-from torchvision.datasets import MNIST
 from torch.utils.data import DataLoader
 from src.utils.parser_args import parser
 
@@ -84,7 +83,7 @@ def main():
         checkpoint_callback = ModelCheckpoint(
             dirpath=args.model_prefix,  # checkpoints_path, # <--- specify this on the trainer itself for version control
             filename="_{epoch}_{step}",
-            every_n_train_steps=1000,
+            every_n_train_steps=500,
             save_top_k=-1,  # <--- this is important!
             save_weights_only=True,
         )
@@ -144,7 +143,5 @@ def main():
 
 
 if __name__ == "__main__":
-        
-    # L.seed_everything(42, workers=True)
     
     main()

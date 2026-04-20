@@ -52,7 +52,12 @@ class geometric_product(nn.Module):
 
     def forward(self, x, y):
         # print("geometric product", self.gp.shape, x.shape, y.shape)
-        outputs1 = torch.einsum("i j k, ab j-> abik", self.gp, x)
+        gp = self.gp
+
+        if gp.device != x.device:
+            gp = gp.to(x.device)
+
+        outputs1 = torch.einsum("i j k, ab j-> abik", gp, x)
         outputs = torch.einsum("abik, abk -> ab i", outputs1, y)
         # outputs = torch.einsum("i j k, ... j, ... k -> ... i", self.gp, x, y)
         return outputs
@@ -126,7 +131,11 @@ def outer_product(op, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     # op = _load_bilinear_basis("outer", device=x.device, dtype=x.dtype)
 
     # Compute geometric product
+    if op.device != x.device:
+        op = op.to(x.device)
+
     outputs1 = torch.einsum("i j k, ab j-> abik", op, x)
+
     outputs = torch.einsum("abik, abk -> ab i", outputs1, y)
     # outputs = torch.einsum("i j k, ... j, ... k -> ... i", op, x, y)
     return outputs

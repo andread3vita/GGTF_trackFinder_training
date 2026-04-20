@@ -15,7 +15,7 @@ Stat:showPartonLevel = off
 Beams:idA = 11                   ! first beam, e- = 11
 Beams:idB = -11                  ! second beam, e+ = -11
 
-Beams:eCM = 90              ! CM energy of collision
+Beams:eCM = 91              ! CM energy of collision
 
 Beams:allowMomentumSpread  = off
 

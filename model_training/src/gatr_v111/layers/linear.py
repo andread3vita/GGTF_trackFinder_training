@@ -73,6 +73,7 @@ class EquiLinear(nn.Module):
     ) -> None:
         super().__init__()
         self.basis = basis_pin
+
         # Check inputs
         if initialization == "unit_scalar":
             assert bias, "unit_scalar initialization requires bias"
@@ -151,7 +152,13 @@ class EquiLinear(nn.Module):
             Output scalars, if scalars are provided. Otherwise None.
         """
 
-        outputs_mv = equi_linear(self.basis, multivectors, self.weight)  # (..., out_channels, 16)
+        basis = self.basis
+        if basis.device != multivectors.device:
+            basis = basis.to(multivectors.device)
+
+        outputs_mv = equi_linear(basis, multivectors, self.weight)
+
+        # outputs_mv = equi_linear(self.basis, multivectors, self.weight)  # (..., out_channels, 16)
 
         if self.bias is not None:
             bias = embed_scalar(self.bias)

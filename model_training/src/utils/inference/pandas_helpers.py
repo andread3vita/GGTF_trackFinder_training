@@ -1,8 +1,8 @@
 import gzip
 import pickle
-import mplhep as hep
+# import mplhep as hep
 
-hep.style.use("CMS")
+# hep.style.use("CMS")
 import matplotlib
 
 matplotlib.rc("font", size=25)

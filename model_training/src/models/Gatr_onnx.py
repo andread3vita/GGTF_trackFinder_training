@@ -13,17 +13,17 @@ from src.layers.inference_oc_tracks import (
 from src.layers.losses import object_condensation_loss_tracking
 from src.layers.batch_operations import obtain_batch_numbers
 
-from src.gatr_v111.nets.gatr import GATr
-from src.gatr_v111.layers.attention.config import SelfAttentionConfig
-from src.gatr_v111.layers.mlp.config import MLPConfig
-from src.gatr_v111.interface import (
+from src.gatr_v111_onnx.nets.gatr import GATr
+from src.gatr_v111_onnx.layers.attention.config import SelfAttentionConfig
+from src.gatr_v111_onnx.layers.mlp.config import MLPConfig
+from src.gatr_v111_onnx.interface import (
     embed_point,
     embed_scalar,
     embed_translation,
 )
-from src.gatr_v111.primitives.invariants import   compute_inner_product_mask
-from src.gatr_v111.primitives.linear import _compute_pin_equi_linear_basis
-from src.gatr_v111.primitives.attention import _build_dist_basis
+from src.gatr_v111_onnx.primitives.invariants import   compute_inner_product_mask
+from src.gatr_v111_onnx.primitives.linear import _compute_pin_equi_linear_basis
+from src.gatr_v111_onnx.primitives.attention import _build_dist_basis
 
 class ExampleWrapper(L.LightningModule):  # nn.Module L.LightningModule
     def __init__(

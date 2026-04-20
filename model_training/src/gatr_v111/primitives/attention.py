@@ -300,6 +300,10 @@ def _build_dist_vec(tri: Tensor, basis: Tensor, normalizer: Callable[[Tensor], T
     # tri_normed = tri * normalizer(tri_)
     tri_normed = tri * normalizer(tri[..., [3]])
     # vec = cached_einsum("xyz,...x,...y->...z", basis, tri_normed, tri_normed)
+
+    if basis.device != tri_normed.device:
+        basis = basis.to(tri_normed.device)
+
     vec = torch.einsum("xyz,abcdx->abcdyz", basis, tri_normed)
     vec = torch.einsum("abcdyz,abcdy->abcdz", vec, tri_normed)
     return vec

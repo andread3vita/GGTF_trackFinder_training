@@ -82,7 +82,7 @@ def main(base_path):
 
         seed = str(job + 1)
 
-        basename = f"{config}_graphs_{seed}_train*"
+        basename = f"{config}_graphs_{seed}_{train_or_val}*"
         output_pattern = os.path.join(storage_path, basename)
         matching_files = glob.glob(output_pattern)
 

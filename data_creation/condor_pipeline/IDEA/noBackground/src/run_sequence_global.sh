@@ -24,7 +24,7 @@ NEV=500
 
 ORIG_PARAMS=("$@")
 set --
-source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh -r 2026-02-26 # if you need to fix a specific nightly: source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh -r your_version
+source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh # if you need to fix a specific nightly: source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh -r your_version
 set -- "${ORIG_PARAMS[@]}"
 
 
@@ -122,6 +122,3 @@ then
       ${USE_LR}
 
 fi
-
-
-
