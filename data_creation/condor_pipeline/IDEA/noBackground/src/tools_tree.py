@@ -151,15 +151,19 @@ def initialize(t):
     hit_EDep = ROOT.std.vector("float")()
     hit_time = ROOT.std.vector("float")()
 
+    # for true hits
     hit_pathLength = ROOT.std.vector("float")()
-    hit_x = ROOT.std.vector("float")()
-    hit_y = ROOT.std.vector("float")()
-    hit_z = ROOT.std.vector("float")()
+    hit_x_true = ROOT.std.vector("float")()
+    hit_y_true = ROOT.std.vector("float")()
+    hit_z_true = ROOT.std.vector("float")()
     hit_px = ROOT.std.vector("float")()
     hit_py = ROOT.std.vector("float")()
     hit_pz = ROOT.std.vector("float")()
     
-    # # for digitized hits
+    # for digitized hits
+    hit_x = ROOT.std.vector("float")()
+    hit_y = ROOT.std.vector("float")()
+    hit_z = ROOT.std.vector("float")()
     leftPosition_x = ROOT.std.vector("float")()
     leftPosition_y = ROOT.std.vector("float")()
     leftPosition_z = ROOT.std.vector("float")()
@@ -167,7 +171,8 @@ def initialize(t):
     rightPosition_y = ROOT.std.vector("float")()
     rightPosition_z = ROOT.std.vector("float")()
     cluster_count = ROOT.std.vector("float")()
-
+    
+    # particle info
     hit_type = ROOT.std.vector("float")()
     hit_particle_index = ROOT.std.vector("float")()
     part_p = ROOT.std.vector("float")()
@@ -178,6 +183,8 @@ def initialize(t):
     part_id = ROOT.std.vector("float")()
     part_parent = ROOT.std.vector("float")()
     part_pid = ROOT.std.vector("float")()
+
+    # cellID and other hit info
     hit_cellID = ROOT.std.vector("int")()
     superLayer = ROOT.std.vector("float")()
     layer = ROOT.std.vector("float")()
@@ -191,14 +198,18 @@ def initialize(t):
     t.Branch("n_hit", n_hit, "n_hit/I")
     t.Branch("n_part", n_part, "n_part/I")
     t.Branch("gen_status", gen_status)
-    t.Branch("hit_x", hit_x)
-    t.Branch("hit_y", hit_y)
-    t.Branch("hit_z", hit_z)
+    t.Branch("hit_x_true", hit_x_true)
+    t.Branch("hit_y_true", hit_y_true)
+    t.Branch("hit_z_true", hit_z_true)
     t.Branch("hit_pathLength", hit_pathLength)
     t.Branch("hit_px", hit_px)
     t.Branch("hit_py", hit_py)
     t.Branch("hit_pz", hit_pz)
 
+
+    t.Branch("hit_x", hit_x)
+    t.Branch("hit_y", hit_y)
+    t.Branch("hit_z", hit_z)
     t.Branch("leftPosition_x", leftPosition_x)
     t.Branch("leftPosition_y", leftPosition_y)
     t.Branch("leftPosition_z", leftPosition_z)
@@ -227,9 +238,9 @@ def initialize(t):
     t.Branch("produced_by_secondary", produced_by_secondary)
 
     dic = {
-        "hit_x": hit_x,
-        "hit_y": hit_y,
-        "hit_z": hit_z,
+        "hit_x_true": hit_x_true,
+        "hit_y_true": hit_y_true,
+        "hit_z_true": hit_z_true,
         "hit_type": hit_type,
         "hit_EDep": hit_EDep,
         "hit_time": hit_time,
@@ -247,6 +258,9 @@ def initialize(t):
         "part_id": part_id,
         "gen_status": gen_status,
         "hit_cellID": hit_cellID,
+        "hit_x": hit_x,
+        "hit_y": hit_y,
+        "hit_z": hit_z,
         "leftPosition_x": leftPosition_x,
         "leftPosition_y": leftPosition_y,
         "leftPosition_z": leftPosition_z,
@@ -353,7 +367,7 @@ def local_to_global(local_pos, x_prime, y_prime, z_prime, wire_pos):
     global_pos = x_prime * local_pos[0] + y_prime * local_pos[1] + z_prime * local_pos[2] + wire_pos
     return global_pos
 
-def store_hit_col_CDC_withLR(
+def store_hit_col_SenseWireHits(
     event,
     n_hit,
     dic,
@@ -427,6 +441,9 @@ def store_hit_col_CDC_withLR(
             raise ValueError(f"y_prime norm invalid! norm_y_prime={norm_y_prime}")
         
         produced_by_secondary = dc_hit.isProducedBySecondary()
+        dic["hit_x"].push_back(wirePos[0])
+        dic["hit_y"].push_back(wirePos[1])
+        dic["hit_z"].push_back(wirePos[2])
         dic["leftPosition_x"].push_back(left_hit_global_position[0])
         dic["leftPosition_y"].push_back(left_hit_global_position[1])
         dic["leftPosition_z"].push_back(left_hit_global_position[2])
@@ -446,14 +463,15 @@ def store_hit_col_CDC_withLR(
         px = momentum.x
         py = momentum.y
         pz = momentum.z
-        dic["hit_x"].push_back(x)
-        dic["hit_y"].push_back(y)
-        dic["hit_z"].push_back(z)
+        dic["hit_x_true"].push_back(x)
+        dic["hit_y_true"].push_back(y)
+        dic["hit_z_true"].push_back(z)
         p = math.sqrt(px * px + py * py + pz * pz)
         dic["hit_px"].push_back(px)
         dic["hit_py"].push_back(py)
         dic["hit_pz"].push_back(pz)
         htype = 0
+
         # dummy example, cellid_encoding = "foo:2,bar:3,baz:-4"
         cellid_encoding = metadata.get_parameter("DCHCollection__CellIDEncoding")
         decoder = dd4hep.BitFieldCoder(cellid_encoding)
@@ -479,91 +497,9 @@ def store_hit_col_CDC_withLR(
         
         n_hit[0] += 1
         
-    return n_hit, dic, list_of_MCs1
+    return n_hit, dic, list_of_MCs1         
 
-def store_hit_col_CDC_withPoints(
-    event,
-    n_hit,
-    dic,
-    metadata
-):
-    
-    dc_links = event.get("DCH_DigiSimAssociationCollection")
-    dc_digi_collection = event.get("DCH_DigiCollection")
-    
-    n_hit[0] = 0
-    list_of_MCs1 = []
-    
-    for idx_link, dc_link in enumerate(dc_links):
-        
-        dc_hit = dc_link.getTo()
-        dc_hit_digi = dc_digi_collection[idx_link]
-        
-        
-        cellID = dc_hit.getCellID()
-        EDep = dc_hit.getEDep()
-        time = dc_hit.getTime()
-        
-        produced_by_secondary = dc_hit.isProducedBySecondary()
-        dic["leftPosition_x"].push_back(0.)
-        dic["leftPosition_y"].push_back(0.)
-        dic["leftPosition_z"].push_back(0.)
-        dic["rightPosition_x"].push_back(0.)
-        dic["rightPosition_y"].push_back(0.)
-        dic["rightPosition_z"].push_back(0.)
-        dic["produced_by_secondary"].push_back(1.0 * produced_by_secondary)
-        cluster_count = dc_hit_digi.getNClusters()
-        dic["cluster_count"].push_back(cluster_count)
-
-        pathLength = dc_hit.getPathLength()
-        
-        #  position along the wire, wire direction and drift distance
-        wirePos = dc_hit_digi.getPosition()
-        x = wirePos.x
-        y = wirePos.y
-        z = wirePos.z
-        
-        momentum = dc_hit.getMomentum()
-        px = momentum.x
-        py = momentum.y
-        pz = momentum.z
-        dic["hit_x"].push_back(x)
-        dic["hit_y"].push_back(y)
-        dic["hit_z"].push_back(z)
-        p = math.sqrt(px * px + py * py + pz * pz)
-        dic["hit_px"].push_back(px)
-        dic["hit_py"].push_back(py)
-        dic["hit_pz"].push_back(pz)
-        
-        htype = 0
-        cellid_encoding = metadata.get_parameter("DCHCollection__CellIDEncoding")
-        decoder = dd4hep.BitFieldCoder(cellid_encoding)
-        superLayer = decoder.get(cellID, "superlayer")
-        layer = decoder.get(cellID, "layer")
-        phi = decoder.get(cellID, "nphi")
-        stereo = decoder.get(cellID, "stereosign")
-        dic["hit_cellID"].push_back(cellID)
-        dic["hit_EDep"].push_back(EDep)
-        dic["hit_time"].push_back(time)
-        dic["hit_pathLength"].push_back(pathLength)
-        dic["hit_type"].push_back(htype)
-        dic["superLayer"].push_back(superLayer)
-        dic["layer"].push_back(layer)
-        dic["phi"].push_back(phi)
-        dic["stereo"].push_back(stereo)
-
-        mcParticle = dc_hit.getParticle()
-        object_id = mcParticle.getObjectID()
-        hit_particle_index = object_id.index
-        dic["hit_particle_index"].push_back(hit_particle_index)
-        list_of_MCs1.append(hit_particle_index)
-        
-        n_hit[0] += 1
-        
-    return n_hit, dic, list_of_MCs1
-             
-
-def store_hit_col_VTX_SIW(
+def store_hit_col_PlanarHits(
     event,
     n_hit,
     dic
@@ -586,11 +522,11 @@ def store_hit_col_VTX_SIW(
             
             EDep = hit_digi.getEDep()
             time = hit_digi.getTime()
-            position = hit_digi.getPosition()
-            
-            x = position.x
-            y = position.y
-            z = position.z
+            position_digi = hit_digi.getPosition()
+            position_sim = hit_sim.getPosition()
+            x = position_digi.x
+            y = position_digi.y
+            z = position_digi.z
             
             cellID = hit_sim.getCellID()
             pathLength = hit_sim.getPathLength()
@@ -607,6 +543,10 @@ def store_hit_col_VTX_SIW(
             dic["hit_EDep"].push_back(EDep)
             dic["hit_time"].push_back(time)
             dic["hit_pathLength"].push_back(pathLength)
+
+            dic["hit_x_true"].push_back(position_sim.x)
+            dic["hit_y_true"].push_back(position_sim.y)
+            dic["hit_z_true"].push_back(position_sim.z)
             
             dic["hit_x"].push_back(x)
             dic["hit_y"].push_back(y)

@@ -28,9 +28,9 @@ inputs:
       pad_mode: wrap
       length: 25000
       vars:
-         - [hit_x, null]
-         - [hit_y, null]
-         - [hit_z, null]
+         - [hit_x_true, null]
+         - [hit_y_true, null]
+         - [hit_z_true, null]
 
    hits_features:
       pad_mode: wrap

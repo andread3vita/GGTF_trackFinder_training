@@ -27,7 +27,6 @@ def main(base_path):
     parser.add_argument("--detectorVersion", help = "Detector Version", default = 3)
     parser.add_argument("--detectorOption", help = "Detector Option", default = 1)
     parser.add_argument("--train_or_val", help = "Dataset type", default = "train")
-    parser.add_argument("--use_lr", help = "Use left-right positions?", default = "True")
     
     parser.add_argument(
         "--queue",
@@ -55,7 +54,6 @@ def main(base_path):
     detectorVersion = int(args.detectorVersion)
     detectorOption = int(args.detectorOption)
     train_or_val = args.train_or_val
-    use_lr = args.use_lr
 
     os.makedirs(f"{outdir}/{sim_type}/{config}", exist_ok=True)
     storage_path = f"{outdir}/{sim_type}/{config}"
@@ -93,7 +91,7 @@ def main(base_path):
             argts = (
                 f"{outdir} {sim_type} {config} "
                 f"{detectorVersion} {detectorOption} "
-                f"{seed} {train_or_val} {use_lr} {base_path}"
+                f"{seed} {train_or_val} {base_path}"
             )
 
             arguments_list.append(argts)

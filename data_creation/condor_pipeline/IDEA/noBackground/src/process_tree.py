@@ -7,9 +7,8 @@ from tools_tree import (
     read_mc_collection,
     clear_dic,
     initialize,
-    store_hit_col_CDC_withLR,
-    store_hit_col_CDC_withPoints,
-    store_hit_col_VTX_SIW,
+    store_hit_col_SenseWireHits,
+    store_hit_col_PlanarHits,
     merge_list_MCS,
     gen_particles_find,
 )
@@ -22,7 +21,6 @@ output_file = sys.argv[2]
 
 det_version = int(sys.argv[3])
 det_option = int(sys.argv[4])
-use_left_right = sys.argv[5] == "True"
 
 metadata = reader.get("metadata")[0]
 
@@ -51,26 +49,17 @@ for event in reader.get("events"):
     
     if (det_version == 3 and det_option == 1):
         
-        if use_left_right:
-            n_hit, dic, list_of_MCs1 = store_hit_col_CDC_withLR(
-                event,
-                n_hit,
-                dic,
-                metadata
-            )
-        else:
-            
-            n_hit, dic, list_of_MCs1 = store_hit_col_CDC_withPoints(
-                event,
-                n_hit,
-                dic,
-                metadata
-            )
+        n_hit, dic, list_of_MCs1 = store_hit_col_SenseWireHits(
+            event,
+            n_hit,
+            dic,
+            metadata
+        )
             
     else:
-        print("Drift Chamber Analyser not yet implemented!")
+        print("Sense Wire Hit analyser not yet implemented!")
     
-    n_hit, dic, list_of_MCs2 = store_hit_col_VTX_SIW(
+    n_hit, dic, list_of_MCs2 = store_hit_col_PlanarHits(
         event,
         n_hit,
         dic
