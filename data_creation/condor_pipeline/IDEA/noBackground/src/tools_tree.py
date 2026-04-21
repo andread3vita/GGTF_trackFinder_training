@@ -374,29 +374,28 @@ def store_hit_col_SenseWireHits(
     metadata
 ):
     
-    dc_links = event.get("DCH_DigiSimAssociationCollection")
-    dc_digi_collection = event.get("DCH_DigiCollection")
+    hit_links = event.get("DCH_DigiSimAssociationCollection")
+    digi_hit_collection = event.get("DCH_DigiCollection")
     
     n_hit[0] = 0
-    list_of_MCs1 = []
+    list_of_MC = []
     
-    for idx_link, dc_link in enumerate(dc_links):
+    for idx_link, link in enumerate(hit_links):
         
-        dc_hit = dc_link.getTo()
-        dc_hit_digi = dc_digi_collection[idx_link]
+        sim_hit = link.getTo()
+        digi_hit = digi_hit_collection[idx_link]
         
-        
-        cellID = dc_hit.getCellID()
-        EDep = dc_hit.getEDep()
-        time = dc_hit.getTime()
+        cellID = sim_hit.getCellID()
+        EDep = sim_hit.getEDep()
+        time = sim_hit.getTime()
         
         #  position along the wire, wire direction and drift distance
-        wirePos = dc_hit_digi.getPosition()
+        wirePos = digi_hit.getPosition()
         wirePos = np.array([wirePos[0],wirePos[1],wirePos[2]])
     
-        distanceToWire = dc_hit_digi.getDistanceToWire()
-        wire_azimuthal_angle = dc_hit_digi.getWireAzimuthalAngle()
-        wire_stereo_angle = dc_hit_digi.getWireStereoAngle()
+        distanceToWire = digi_hit.getDistanceToWire()
+        wire_azimuthal_angle = digi_hit.getWireAzimuthalAngle()
+        wire_stereo_angle = digi_hit.getWireStereoAngle()
         
         d_x = np.sin(wire_stereo_angle) * np.sin(wire_azimuthal_angle)
         d_y = -(np.sin(wire_stereo_angle) * np.cos(wire_azimuthal_angle))
@@ -439,8 +438,9 @@ def store_hit_col_SenseWireHits(
         # norm_y_prime
         if norm_y_prime < 1e-12 or np.isnan(norm_y_prime) or np.isinf(norm_y_prime):
             raise ValueError(f"y_prime norm invalid! norm_y_prime={norm_y_prime}")
-        
-        produced_by_secondary = dc_hit.isProducedBySecondary()
+
+        cluster_count = digi_hit.getNClusters()
+
         dic["hit_x"].push_back(wirePos[0])
         dic["hit_y"].push_back(wirePos[1])
         dic["hit_z"].push_back(wirePos[2])
@@ -450,19 +450,19 @@ def store_hit_col_SenseWireHits(
         dic["rightPosition_x"].push_back(right_hit_global_position[0])
         dic["rightPosition_y"].push_back(right_hit_global_position[1])
         dic["rightPosition_z"].push_back(right_hit_global_position[2])
-        dic["produced_by_secondary"].push_back(1.0 * produced_by_secondary)
-        cluster_count = dc_hit_digi.getNClusters()
+
         dic["cluster_count"].push_back(cluster_count)
 
-        pathLength = dc_hit.getPathLength()
-        position = dc_hit.getPosition()
+        pathLength = sim_hit.getPathLength()
+        position = sim_hit.getPosition()
         x = position.x
         y = position.y
         z = position.z
-        momentum = dc_hit.getMomentum()
+        momentum = sim_hit.getMomentum()
         px = momentum.x
         py = momentum.y
         pz = momentum.z
+        produced_by_secondary = sim_hit.isProducedBySecondary()
         dic["hit_x_true"].push_back(x)
         dic["hit_y_true"].push_back(y)
         dic["hit_z_true"].push_back(z)
@@ -470,6 +470,9 @@ def store_hit_col_SenseWireHits(
         dic["hit_px"].push_back(px)
         dic["hit_py"].push_back(py)
         dic["hit_pz"].push_back(pz)
+
+        dic["produced_by_secondary"].push_back(1.0 * produced_by_secondary)
+
         htype = 0
 
         # dummy example, cellid_encoding = "foo:2,bar:3,baz:-4"
@@ -489,15 +492,15 @@ def store_hit_col_SenseWireHits(
         dic["phi"].push_back(phi)
         dic["stereo"].push_back(stereo)
 
-        mcParticle = dc_hit.getParticle()
+        mcParticle = sim_hit.getParticle()
         object_id = mcParticle.getObjectID()
         hit_particle_index = object_id.index
         dic["hit_particle_index"].push_back(hit_particle_index)
-        list_of_MCs1.append(hit_particle_index)
+        list_of_MC.append(hit_particle_index)
         
         n_hit[0] += 1
         
-    return n_hit, dic, list_of_MCs1         
+    return n_hit, dic, list_of_MC         
 
 def store_hit_col_PlanarHits(
     event,
@@ -512,7 +515,7 @@ def store_hit_col_PlanarHits(
     
     hit_collections_links = [vtxD_links, vtxB_links,Siw_D_links,Siw_B_links]
     
-    list_of_MCs1 = []
+    list_of_MC = []
     for coll in hit_collections_links:
 
         for link in coll:
@@ -522,23 +525,37 @@ def store_hit_col_PlanarHits(
             
             EDep = hit_digi.getEDep()
             time = hit_digi.getTime()
-            position_digi = hit_digi.getPosition()
-            position_sim = hit_sim.getPosition()
-            x = position_digi.x
-            y = position_digi.y
-            z = position_digi.z
-            
             cellID = hit_sim.getCellID()
+
+            # digi hit
+            position_digi = hit_digi.getPosition()
+
+            dic["hit_x"].push_back(position_digi.x)
+            dic["hit_y"].push_back(position_digi.y)
+            dic["hit_z"].push_back(position_digi.z)
+            dic["leftPosition_x"].push_back(0)
+            dic["leftPosition_y"].push_back(0)
+            dic["leftPosition_z"].push_back(0)
+            dic["rightPosition_x"].push_back(0)
+            dic["rightPosition_y"].push_back(0)
+            dic["rightPosition_z"].push_back(0)
+            dic["cluster_count"].push_back(0)
+
+
+            # sim hit
+
+            position_sim = hit_sim.getPosition()
             pathLength = hit_sim.getPathLength()
             momentum = hit_sim.getMomentum()
             produced_by_secondary = hit_sim.isProducedBySecondary()
-             
+
             px = momentum.x
             py = momentum.y
             pz = momentum.z
-            
+
             htype = 1
-            
+           
+            dic["produced_by_secondary"].push_back(1.0 * produced_by_secondary)
             dic["hit_cellID"].push_back(cellID)
             dic["hit_EDep"].push_back(EDep)
             dic["hit_time"].push_back(time)
@@ -547,10 +564,6 @@ def store_hit_col_PlanarHits(
             dic["hit_x_true"].push_back(position_sim.x)
             dic["hit_y_true"].push_back(position_sim.y)
             dic["hit_z_true"].push_back(position_sim.z)
-            
-            dic["hit_x"].push_back(x)
-            dic["hit_y"].push_back(y)
-            dic["hit_z"].push_back(z)
             
             dic["hit_px"].push_back(px)
             dic["hit_py"].push_back(py)
@@ -562,25 +575,17 @@ def store_hit_col_PlanarHits(
             dic["layer"].push_back(0)
             dic["phi"].push_back(0)
             dic["stereo"].push_back(0)
-            dic["leftPosition_x"].push_back(0)
-            dic["leftPosition_y"].push_back(0)
-            dic["leftPosition_z"].push_back(0)
-            dic["rightPosition_x"].push_back(0)
-            dic["rightPosition_y"].push_back(0)
-            dic["rightPosition_z"].push_back(0)
-            dic["cluster_count"].push_back(0)
-            dic["produced_by_secondary"].push_back(1.0 * produced_by_secondary)
-            
+
             
             mcParticle = hit_sim.getParticle()
             object_id = mcParticle.getObjectID()
             hit_particle_index = object_id.index
 
             dic["hit_particle_index"].push_back(hit_particle_index)
-            list_of_MCs1.append(hit_particle_index)
+            list_of_MC.append(hit_particle_index)
             n_hit[0] += 1
 
-    return n_hit, dic, list_of_MCs1
+    return n_hit, dic, list_of_MC
 
 
 def merge_list_MCS(list_1, list_2):
