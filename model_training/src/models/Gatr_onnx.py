@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import os
 import lightning as L
-from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from src.logger.logger_wandb import log_losses_wandb_tracking
 from src.layers.inference_oc_tracks import (
@@ -357,14 +357,23 @@ class ExampleWrapper(L.LightningModule):  # nn.Module L.LightningModule
                 predict=True,
             )
 
-    def configure_optimizers(self):
+   def configure_optimizers(self):
+
         optimizer = torch.optim.Adam(self.parameters(), lr=self.args.start_lr)
+
+        scheduler = ReduceLROnPlateau(
+            optimizer,
+            mode='min',
+            factor=0.5,
+            patience=3,
+            threshold=1e-3,
+            verbose=True
+        )
+
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
-                "scheduler": StepLR(optimizer, step_size=4, gamma=0.1),
-                "interval": "epoch",
-                "monitor": "train_loss_epoch",
-                "frequency": 1,
+                "scheduler": scheduler,
+                "monitor": "val_loss",
             },
         }

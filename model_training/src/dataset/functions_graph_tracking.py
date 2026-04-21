@@ -236,19 +236,27 @@ def create_graph_tracking_global(output, fileID, eventID, get_vtx=False, vector=
                         dim=0,
                     )
                     
+                    # pos_xyz = torch.cat(
+                    #     (features_hits[:, 0:3][mask_vtx], left_post), dim=0
+                    # )
+
                     pos_xyz = torch.cat(
-                        (features_hits[:, 0:3][mask_vtx], left_post), dim=0
+                        (features_hits[:, 0:3][mask_vtx], features_hits[:, 0:3][mask_dc]), dim=0
                     )
-                    is_overlay = torch.cat(
-                        (features_hits[:,-1][mask_vtx].view(-1), features_hits[:,-1][mask_dc].view(-1)), dim=0
-                    )
+
+                    # is_overlay = torch.cat(
+                    #     (features_hits[:,-1][mask_vtx].view(-1), features_hits[:,-1][mask_dc].view(-1)), dim=0
+                    # )
+
                     vector_data = torch.cat(
                         (0 * features_hits[:, 0:3][mask_vtx], right_post - left_post),
                         dim=0,
                     )
+
                     hit_type_all = torch.cat(
                         (hit_type[mask_vtx], hit_type[mask_dc]), dim=0
                     )
+
                     cellid = torch.cat(
                         (
                             features_hits[:, -1][mask_vtx].view(-1, 1),
@@ -256,6 +264,7 @@ def create_graph_tracking_global(output, fileID, eventID, get_vtx=False, vector=
                         ),
                         dim=0,
                     )
+
                     produced_from_secondary_ = torch.cat(
                         (
                             isProducedBySecondary[mask_vtx].view(-1, 1),
@@ -265,6 +274,7 @@ def create_graph_tracking_global(output, fileID, eventID, get_vtx=False, vector=
                     )
                     
                 else:
+
                     particle_number = torch.cat(
                         (
                             cluster_id[mask_vtx],
@@ -316,6 +326,7 @@ def create_graph_tracking_global(output, fileID, eventID, get_vtx=False, vector=
                     )
             
             else:
+
                 particle_number = torch.cat((cluster_id, cluster_id), dim=0)
                 particle_number_nomap = torch.cat(
                     (hit_particle_link, hit_particle_link), dim=0
@@ -337,7 +348,7 @@ def create_graph_tracking_global(output, fileID, eventID, get_vtx=False, vector=
             g.ndata["particle_number_nomap_original"] = particle_number_nomap_original
             g.ndata["pos_hits_xyz"] = pos_xyz
             g.ndata["cellid"] = cellid
-            g.ndata["is_overlay"] = is_overlay
+            # g.ndata["is_overlay"] = is_overlay
             g.ndata["isSecondary"] = produced_from_secondary_
             
             if len(y_data_graph) < 1:
