@@ -43,37 +43,7 @@ side with the original.
 
 ---
 
-## 2. Why CGA?
-
-A drift-chamber hit is fundamentally not a point. The detector measures the
-identity of the wire that fired and the drift radius around it; the actual
-particle hit lies somewhere on the **circle** described by that wire and
-drift radius. Upstream encodes this by either taking the wire midpoint or
-splitting the hit into two "left/right" point candidates on the wire.
-
-In **Conformal Geometric Algebra Cl(4,1)** every classical geometric
-primitive — points, spheres, planes, circles, lines, motors — lives in the
-*same* graded vector space (32-dim multivectors split into grades 0–5). In
-particular:
-
-- A 3-D point P(x,y,z) is a null grade-1 vector (`embed_point`).
-- A sphere of radius r centred at c is a non-null grade-1 vector `S = P(c) − (r²/2)·e∞` (`embed_sphere`).
-- A circle is the intersection of a sphere with a plane and is the outer
-  product `C = S ∧ π`, a grade-2 bivector (`embed_circle_ipns`).
-
-This means a drift-chamber hit can be encoded **losslessly** as the IPNS
-circle defined by its sense wire and drift radius — no left/right
-disambiguation, no information loss. Equivariance under rotations,
-translations, scalings and Lorentz transformations is automatic for any
-network built from the geometric product, grade projection and norms.
-
-The CGA backbone (`src/cgatr/`) is structured exactly like upstream's PGA
-package (`src/gatr_v111/`): same module names, same primitives, same block
-recipe. Only the underlying algebra and the input encoding differ.
-
----
-
-## 3. CGA hit encoding
+## 2. CGA hit encoding
 
 ```python
 # src/train_cgatr_parquet.py — `CGATrParquetModel.forward`
@@ -99,7 +69,7 @@ pre-computed (`model_training/cga_utils/*.pt`); they can be regenerated with
 
 ---
 
-## 4. Loss: OC + within-cluster variance regularizer
+## 3. Loss: OC + within-cluster variance regularizer
 
 The base Object-Condensation loss is unchanged in spirit:
 
@@ -140,7 +110,7 @@ flags.
 
 ---
 
-## 5. New code map
+## 4. New code map
 
 ```
 model_training/
@@ -202,7 +172,7 @@ data_creation/
 
 ---
 
-## 6. Dataset
+## 5. Dataset
 
 The CGATr training run consumed Z-pole `e+e-` events simulated for the
 **IDEA o1_v03** detector concept at FCC-ee. The whole pipeline is in the
@@ -267,11 +237,12 @@ DC + VTX hits per event:
   ~50 % of events exceed 3 000 hits
 ```
 
-CGATr is an O(N²) attention model on 32-component multivectors. On a
-single 40 GB A100 with `batch_size=4`, `num_blocks=10`, `hidden_mv_channels=16`,
-`hidden_s_channels=64`, even FlashAttention runs out of memory above ≈3 000
-hits per event. Increasing `--max_hits` beyond that fails on our hardware
-during the second backward pass.
+CGATr is an O(N²) attention model on 32-component multivectors. We train
+on **4× V100 32 GB** with `batch_size=4`, `num_blocks=10`,
+`hidden_mv_channels=16`, `hidden_s_channels=64`; per GPU, even
+FlashAttention runs out of memory above ≈3 000 hits per event. Increasing
+`--max_hits` beyond that fails on our hardware during the second backward
+pass.
 
 We therefore truncate every event to **≤ 3 000 hits** in
 `IDEAParquetDataset.__getitem__`:
