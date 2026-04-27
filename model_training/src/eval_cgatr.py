@@ -373,7 +373,10 @@ def main():
     parser = argparse.ArgumentParser(description="Clustering sweep for a CGATr checkpoint")
     parser.add_argument("--data_dir", type=str, required=True)
     parser.add_argument("--checkpoint", type=str, required=True)
-    parser.add_argument("--eval_seeds", type=str, default="111-112")
+    parser.add_argument("--eval_seeds", type=str, default="181-200",
+                        help="Inclusive seed range for the eval set. Defaults to "
+                             "181-200, disjoint from the train (1-160) and val "
+                             "(161-180) ranges used in the reference run.")
     parser.add_argument("--max_hits", type=int, default=3000)
     parser.add_argument("--max_events", type=int, default=100)
     parser.add_argument("--num_blocks", type=int, default=10)
