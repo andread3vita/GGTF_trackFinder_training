@@ -509,6 +509,89 @@ tracks for ≥ 80 % of all tracks; the residual mismatches are dominated by
 short tracks (consistent with the n_hits breakdown in §7.3) and a handful
 of curlers fragmenting into multiple sub-clusters.
 
+### 8.3 Drift circles (DC measurement geometry)
+
+The plots above use only `(hit_x, hit_y, hit_z)` — the closest-approach
+point on the track. Each DC measurement is actually a **drift circle**:
+centered on the wire `(wire_x, wire_y, wire_z)`, radius equal to the
+drift distance, lying in the plane perpendicular to the wire direction
+`(sin θ_stereo cos φ, sin θ_stereo sin φ, cos θ_stereo)` — the same
+parameterization used by `embed_circle_ipns` in the model. The plots
+below visualize that geometry directly.
+
+Generated with
+`model_training/src/plot_events_3d_v35_circles.py` and saved in
+`eval_results/v35_events_3d_circles/`.
+
+**Six-event grid (predicted clusters, drift circles).**
+
+![Six-event grid: drift circles, predicted track labels](model_training/eval_results/v35_events_3d_circles/grid_circles_predicted.png)
+
+**Six-event grid (true MC tracks, drift circles).**
+
+![Six-event grid: drift circles, true MC labels](model_training/eval_results/v35_events_3d_circles/grid_circles_true.png)
+
+At full chamber scale (±2000 a.u.) drift circles still look almost like
+points — drift distances are 0–10 a.u., so each circle spans <1 % of the
+view. To make the geometry obvious, the next four panels zoom into a
+±100 a.u. window around the densest track of each event. Drift circles
+appear as small **tilted ellipses**: the tilt comes from the stereo
+angle (≤ 14°), the in-plane diameter is `2 × drift_distance`, and all
+circles belonging to the same predicted track share a colour.
+
+| ev | full event (3D circles) | xy projection (with circles) | zoom (drift circles visible) |
+|---|---|---|---|
+| 000 | ![](model_training/eval_results/v35_events_3d_circles/event000_3d_circles.png) | ![](model_training/eval_results/v35_events_3d_circles/event000_xy_circles.png) | ![](model_training/eval_results/v35_events_3d_circles/event000_3d_circles_zoom.png) |
+| 004 | ![](model_training/eval_results/v35_events_3d_circles/event004_3d_circles.png) | ![](model_training/eval_results/v35_events_3d_circles/event004_xy_circles.png) | ![](model_training/eval_results/v35_events_3d_circles/event004_3d_circles_zoom.png) |
+| 007 | ![](model_training/eval_results/v35_events_3d_circles/event007_3d_circles.png) | ![](model_training/eval_results/v35_events_3d_circles/event007_xy_circles.png) | ![](model_training/eval_results/v35_events_3d_circles/event007_3d_circles_zoom.png) |
+| 009 | ![](model_training/eval_results/v35_events_3d_circles/event009_3d_circles.png) | ![](model_training/eval_results/v35_events_3d_circles/event009_xy_circles.png) | ![](model_training/eval_results/v35_events_3d_circles/event009_3d_circles_zoom.png) |
+
+In the zoom panels v35 typically merges all 15–20 drift circles along a
+single track into one predicted cluster (same colour throughout) — the
+visual confirmation of the §7.3 high-n_hits efficiency.
+
+#### HDBSCAN clustering with drift circles
+
+Same six events, same anchoring, but the predicted labels now come from
+HDBSCAN(`mcs=2, ms=1, eps=0.10`). Saved in
+`eval_results/v35_events_3d_circles_hdbscan/`.
+
+![Six-event grid: drift circles, HDBSCAN predicted](model_training/eval_results/v35_events_3d_circles_hdbscan/grid_circles_predicted.png)
+
+| ev | full event (3D circles) | xy projection (with circles) | zoom (drift circles visible) |
+|---|---|---|---|
+| 000 | ![](model_training/eval_results/v35_events_3d_circles_hdbscan/event000_3d_circles.png) | ![](model_training/eval_results/v35_events_3d_circles_hdbscan/event000_xy_circles.png) | ![](model_training/eval_results/v35_events_3d_circles_hdbscan/event000_3d_circles_zoom.png) |
+| 002 | ![](model_training/eval_results/v35_events_3d_circles_hdbscan/event002_3d_circles.png) | ![](model_training/eval_results/v35_events_3d_circles_hdbscan/event002_xy_circles.png) | ![](model_training/eval_results/v35_events_3d_circles_hdbscan/event002_3d_circles_zoom.png) |
+| 007 | ![](model_training/eval_results/v35_events_3d_circles_hdbscan/event007_3d_circles.png) | ![](model_training/eval_results/v35_events_3d_circles_hdbscan/event007_xy_circles.png) | ![](model_training/eval_results/v35_events_3d_circles_hdbscan/event007_3d_circles_zoom.png) |
+| 009 | ![](model_training/eval_results/v35_events_3d_circles_hdbscan/event009_3d_circles.png) | ![](model_training/eval_results/v35_events_3d_circles_hdbscan/event009_xy_circles.png) | ![](model_training/eval_results/v35_events_3d_circles_hdbscan/event009_3d_circles_zoom.png) |
+
+#### v34 vs v35 zoom regression check
+
+Side-by-side for the same hits using the same greedy clustering: True
+MC | v34 predicted | v35 predicted. The zoom is anchored on the true
+track that maximises (`#v34 clusters covering it - #v35 clusters
+covering it`), i.e. the track where v34 fragments most and v35
+consolidates most. The suptitle quotes the *global* fragmentation
+counts for that target track (across the full event, not just the
+window), so a long track that spans the chamber can still appear short
+in the local view.
+
+Generated with `model_training/src/plot_events_3d_compare.py`. Saved in
+`eval_results/v34_v35_zoom_compare/`.
+
+| ev | True MC \| v34 predicted \| v35 predicted |
+|---|---|
+| 000 | ![](model_training/eval_results/v34_v35_zoom_compare/event000_zoom_compare.png) |
+| 001 | ![](model_training/eval_results/v34_v35_zoom_compare/event001_zoom_compare.png) |
+| 002 | ![](model_training/eval_results/v34_v35_zoom_compare/event002_zoom_compare.png) |
+| 007 | ![](model_training/eval_results/v34_v35_zoom_compare/event007_zoom_compare.png) |
+| 009 | ![](model_training/eval_results/v34_v35_zoom_compare/event009_zoom_compare.png) |
+
+In events 0, 7 and 9 the suptitle reports the v35 count is meaningfully
+lower than v34's (e.g. event 9: a 17-hit track split 4-ways by v34 is
+single-cluster under v35), confirming that v35's cluster
+re-consolidation is the source of its +0.04 high-n_hits efficiency.
+
 ---
 
 ## 9. Verdict vs. v34
@@ -613,6 +696,31 @@ PYTHONPATH=. python src/plot_events_3d_v35.py \
   --hdbscan_eps 0.10 \
   --eval_seeds 191-191 --n_events 6 \
   --output_dir eval_results/v35_events_3d_hdbscan
+
+# 3D events with DC drift circles (greedy)
+PYTHONPATH=. python src/plot_events_3d_v35_circles.py \
+  --data_dir /home/marko.cechovic/cgatr/data_parquet_train \
+  --checkpoint checkpoints/cgatr_v35/cgatr_best.pt --embed_dim 5 \
+  --algorithm greedy --tbeta 0.10 --td 0.20 \
+  --eval_seeds 181-181 --n_events 6 --zoom_window 100 \
+  --output_dir eval_results/v35_events_3d_circles
+
+# 3D events with DC drift circles (HDBSCAN)
+PYTHONPATH=. python src/plot_events_3d_v35_circles.py \
+  --data_dir /home/marko.cechovic/cgatr/data_parquet_train \
+  --checkpoint checkpoints/cgatr_v35/cgatr_best.pt --embed_dim 5 \
+  --algorithm hdbscan --hdb_mcs 2 --hdb_ms 1 --hdb_eps 0.10 \
+  --eval_seeds 181-181 --n_events 6 --zoom_window 100 \
+  --output_dir eval_results/v35_events_3d_circles_hdbscan
+
+# v34 vs v35 zoom regression check
+PYTHONPATH=. python src/plot_events_3d_compare.py \
+  --data_dir /home/marko.cechovic/cgatr/data_parquet_train \
+  --ckpt_a checkpoints/cgatr_v34/cgatr_best.pt --embed_a 6 --label_a v34 \
+  --ckpt_b checkpoints/cgatr_v35/cgatr_best.pt --embed_b 5 --label_b v35 \
+  --algorithm greedy --tbeta 0.10 --td 0.20 \
+  --eval_seeds 181-181 --n_events 6 --zoom_window 150 \
+  --output_dir eval_results/v34_v35_zoom_compare
 ```
 
 Artifact map:
