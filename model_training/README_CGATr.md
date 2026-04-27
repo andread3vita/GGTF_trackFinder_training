@@ -180,11 +180,24 @@ model_training/
 │   ├── dataset/parquet_dataset.py          ← NEW: lightweight Polars-based
 │   │                                              IDEA Parquet IterableDataset
 │   ├── train_cgatr_parquet.py              ← NEW: DDP training entry point
-│   └── eval_cgatr.py                       ← NEW: sweep eval (greedy/DBSCAN/HDBSCAN)
+│   ├── eval_cgatr.py                       ← NEW: sweep eval (greedy/DBSCAN/HDBSCAN)
+│   ├── eval_cgatr_analysis.py              ← NEW: fine-grained sweep + embedding stats,
+│   │                                              composite ranking, raw caches for plots
+│   ├── eval_cgatr_tdprobe.py               ← NEW: low-`td` greedy probe
+│   ├── eval_cgatr_merge.py                 ← NEW: two-pass greedy-then-merge post-processor
+│   ├── eval_cgatr_pt_eta.py                ← NEW: per-pT and per-eta efficiency breakdown
+│   ├── merge_cgatr_analysis.py             ← NEW: merge per-GPU eval_cgatr_analysis outputs
+│   ├── plot_cgatr_analysis.py              ← NEW: figure generator for the analysis sweep
+│   ├── cgatr_pca.py                        ← NEW: PCA of trained embeddings (sizes embed_dim)
+│   └── analyze_cgatr_log.py                ← NEW: training-log parser + preview report
 │
 ├── README.md                               ← unchanged
 ├── README_CGATr.md                         ← THIS FILE
 └── (everything else unchanged: gatr_v111/, gatr_v111_onnx/, train_lightning.py, ...)
+
+data_creation/
+├── edm4hep_to_parquet.py                   ← NEW: digitized edm4hep ROOT → Parquet shards
+└── (everything else unchanged)
 ```
 
 ---
@@ -210,15 +223,34 @@ in the eval sweep.
 
 ```
 <data_dir>/
-  vtx/event_seed_<N>.parquet      # vertex-detector hits
-  dc/event_seed_<N>.parquet       # drift-chamber hits
+  seed_<N>/
+    dc_hits_<split>.parquet         # drift-chamber hits
+    vtx_hits_<split>.parquet        # vertex / silicon-wrapper hits
+    mc_particles_<split>.parquet    # MC particle properties (used by pt/eta eval)
 ```
 
-with the columns used in `parquet_dataset.py`
+with the columns used in `src/dataset/parquet_dataset.py`
 (`hit_x/y/z`, `wire_x/y/z`, `drift_distance`, `wire_azimuthal_angle`,
 `wire_stereo_angle`, `mc_index`, `produced_by_secondary`, `event_id`,
-`hit_id`, …). The conversion from the upstream ROOT/edm4hep format to this
-Parquet layout is done outside of this PR.
+`hit_id`, …).
+
+The conversion from the upstream digitized edm4hep ROOT files to this
+Parquet layout is provided by `data_creation/edm4hep_to_parquet.py`:
+
+```bash
+# typically run on lxplus where podio/edm4hep are available
+source /cvmfs/sw-nightlies.hsf.org/key4hep/setup.sh
+pip install --user pyarrow
+python data_creation/edm4hep_to_parquet.py \
+    --input_dir  <raw_root_dir>     \
+    --output_dir <parquet_out_dir>  \
+    --split      train
+```
+
+The script extracts wire geometry + drift radius for the drift chamber
+(everything CGA needs to reconstruct the IPNS circle), point positions
+for the vertex/silicon hits, and the MC particle properties used for
+truth-matching and efficiency breakdowns.
 
 ### 6.3 Training (single GPU)
 
@@ -262,7 +294,7 @@ Important flags:
 | `--hidden_s_channels` | 64 | Scalar hidden channels per block. |
 | `--cosine_norm` | off | L2-normalize clustering coords before loss. |
 
-### 6.5 Evaluation sweep
+### 6.5 Evaluation sweep (coarse)
 
 ```bash
 cd model_training
@@ -278,6 +310,66 @@ This sweeps β-greedy `(tbeta, td)`, DBSCAN `(eps, min_samples)` and HDBSCAN
 `min_cluster_size`, and writes `sweep_results.json` plus a top-30 summary
 table to stdout. `--embed_dim` must match the dimension used during
 training.
+
+### 6.6 Fine analysis + figures (multi-GPU friendly)
+
+A second pass that scans much finer grids, dumps raw embedding samples and
+per-event caches, and produces figures (β-distributions, per-dim embedding
+histograms, t-SNE / UMAP per event, sweep Pareto plot, greedy scan per
+`td`):
+
+```bash
+cd model_training
+# split eval seeds across GPUs and run in parallel
+for G in 0 1 2 3; do
+  CUDA_VISIBLE_DEVICES=$G PYTHONPATH=. python src/eval_cgatr_analysis.py \
+      --data_dir   <path_to_parquet_data> \
+      --checkpoint checkpoints/cgatr/cgatr_best.pt \
+      --embed_dim  5 \
+      --eval_seeds $((181 + 2*G))-$((181 + 2*(G+1))) \
+      --output_dir eval_results/cgatr_analysis_gpu$G &
+done; wait
+
+PYTHONPATH=. python src/merge_cgatr_analysis.py \
+    --dirs eval_results/cgatr_analysis_gpu0 eval_results/cgatr_analysis_gpu1 \
+           eval_results/cgatr_analysis_gpu2 eval_results/cgatr_analysis_gpu3 \
+    --out  eval_results/cgatr_analysis_merged
+
+PYTHONPATH=. python src/plot_cgatr_analysis.py \
+    --analysis_dir eval_results/cgatr_analysis_merged \
+    --output_dir   eval_results/cgatr_analysis_merged/plots
+```
+
+Optional follow-ups on the merged outputs:
+
+- `src/cgatr_pca.py --samples eval_results/cgatr_analysis_merged/samples.pkl` —
+  reports cumulative explained variance per embedding dimension. We used
+  this to confirm that the trained 6-D embedding sat in a 5-D subspace,
+  motivating `embed_dim=5`.
+- `src/eval_cgatr_tdprobe.py` — fine `td` probe (e.g. 0.02–0.05) when the
+  coarse sweep saturates at the lower edge.
+- `src/eval_cgatr_merge.py` — two-pass greedy-then-merge clustering with
+  an optional MC-purity gate (oracle upper bound for what a smarter
+  post-processor could buy).
+- `src/eval_cgatr_pt_eta.py` — per-pT and per-eta efficiency breakdown by
+  joining clustering output with the MC-particle Parquet.
+
+### 6.7 Live training-log analysis
+
+While a run is in progress (or after) you can produce a quick plot/report
+pack from its stdout log without disturbing the run:
+
+```bash
+python model_training/src/analyze_cgatr_log.py \
+    --log run.log \
+    --total_epochs 40 \
+    --out_dir model_training/eval_results/cgatr_preview
+# optional head-to-head against a previous run:
+python model_training/src/analyze_cgatr_log.py \
+    --log run.log --baseline_log baseline-run.log \
+    --baseline_label baseline --current_label cgatr \
+    --out_dir model_training/eval_results/cgatr_preview
+```
 
 ---
 
