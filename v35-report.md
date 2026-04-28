@@ -71,6 +71,46 @@ Hardware/protocol unchanged from v34: 4× V100 32 GB DDP, batch 4×4 = 16,
 max_hits=3000, EMA decay 0.999, AdamW + cosine warmup. 924,624 parameters
 (−32 vs v34 because the clustering head shrinks 6 → 5).
 
+### 1.1 Training dynamics
+
+35 epochs, 4× V100 32 GB DDP, ≈ 228 min/epoch wall-clock,
+**133.4 h ≈ 5.6 days** total. Six-panel summary parsed from `v35-run.log`
+by `model_training/src/plot_training_curves_v35.py` and saved in
+`eval_results/v35_training_curves/`.
+
+![v35 training curves: loss, components, val metrics, LR/L_var schedule, wall-time](model_training/eval_results/v35_training_curves/v35_training_curves.png)
+
+What the panels show, top-left to bottom-right:
+
+1. **Loss curves.** Train loss (per-batch, smoothed; epoch-avg blue circles)
+   and val loss (red squares). Train and val track each other tightly —
+   no overfitting signature. The gap between the two reflects EMA-of-
+   weights vs raw weights at val time.
+2. **Loss components** (log scale). `L_att` and `L_var` decay smoothly;
+   `L_rep` plateaus at ≈ 0.07–0.10 because there is always *some*
+   between-cluster repulsion to be paid in a 5D embedding. Note the
+   `L_var` spike around epoch 1–2 — that's the warmup ramp from 0 → 0.30
+   forcing L_var into the loss after the embedding has already started
+   clustering.
+3. **Validation metrics per epoch.** Purity ≈ 0.876 reaches its plateau
+   by epoch 6 and stays there for the next 30 epochs — the model knows
+   how to be pure very quickly. Efficiency climbs steadily from 0.37
+   (epoch 1) to 0.83 (epoch 35), and is the metric that actually drives
+   `match_rate` after epoch 6. **Match rate plateaus at 0.722** by
+   epoch ≈ 25; the last 10 epochs gain only 0.001-0.002, which is what
+   triggered the stop-training decision. Noise suppression climbs
+   from 0.74 to 0.94 — the beta head learning to push background hits
+   to small β.
+4. **LR schedule + L_var weight ramp.** AdamW with 1-epoch warmup to
+   `5e-4`, cosine decay to `1e-5` over 35 epochs. Green dashed: the
+   L_var weight ramps 0 → 0.30 over epochs 1–2 (`var_warmup_epochs=2`).
+5. **Per-epoch wall time.** Strikingly uniform — ≈ 228 min/epoch
+   regardless of where in training. The token-budget batch sampler
+   (`max_tokens` packing + DDP) gives reproducible epoch durations.
+6. **Cumulative training time.** Linear, hits 133.4 h at the saved
+   `cgatr_best.pt`. This is the cost we pay for one model from scratch
+   on 4× V100; the v36 pilots fine-tune from this in ~5 h each.
+
 ---
 
 ## 2. Coarse sweep (3,842 events, seeds 191-200)
@@ -676,6 +716,11 @@ PYTHONPATH=. python src/merge_v35_sweep.py \
 PYTHONPATH=. python src/plot_analysis_v35.py \
   --analysis_dir eval_results/v35_analysis_merged \
   --output_dir   eval_results/v35_analysis_merged/plots
+
+# training curves (parsed from v35-run.log)
+PYTHONPATH=. python src/plot_training_curves_v35.py \
+  --log /home/marko.cechovic/cgatr/v35-run.log \
+  --output_dir eval_results/v35_training_curves
 PYTHONPATH=. python src/pca_v34.py \
   --samples eval_results/v35_analysis_merged/samples.pkl \
   --output  eval_results/v35_analysis_merged/pca_results.json
