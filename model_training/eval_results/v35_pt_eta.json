@@ -1,0 +1,213 @@
+{
+  "checkpoint": "checkpoints/cgatr_v35/cgatr_best.pt",
+  "eval_seeds": "195-196",
+  "tbeta": 0.1,
+  "td": 0.2,
+  "n_events_processed": 500,
+  "n_tracks_evaluated": 11832,
+  "n_charged_joined": 11831,
+  "overall_efficiency": 0.8790003416051715,
+  "overall_match_rate": 0.7613895697743217,
+  "pt_bins": [
+    {
+      "bin_lo": 0.0,
+      "bin_hi": 0.1,
+      "n_tracks": 3218,
+      "efficiency": 0.8761690440446459,
+      "match_rate": 0.48756991920447484
+    },
+    {
+      "bin_lo": 0.1,
+      "bin_hi": 0.2,
+      "n_tracks": 963,
+      "efficiency": 0.7495170682403904,
+      "match_rate": 0.6822429906542056
+    },
+    {
+      "bin_lo": 0.2,
+      "bin_hi": 0.5,
+      "n_tracks": 2252,
+      "efficiency": 0.7977738306035393,
+      "match_rate": 0.8090586145648313
+    },
+    {
+      "bin_lo": 0.5,
+      "bin_hi": 1.0,
+      "n_tracks": 1798,
+      "efficiency": 0.9013284682459797,
+      "match_rate": 0.8843159065628476
+    },
+    {
+      "bin_lo": 1.0,
+      "bin_hi": 2.0,
+      "n_tracks": 1443,
+      "efficiency": 0.9573117027102098,
+      "match_rate": 0.9244629244629244
+    },
+    {
+      "bin_lo": 2.0,
+      "bin_hi": 5.0,
+      "n_tracks": 1316,
+      "efficiency": 0.9514009644428731,
+      "match_rate": 0.9376899696048632
+    },
+    {
+      "bin_lo": 5.0,
+      "bin_hi": 10.0,
+      "n_tracks": 546,
+      "efficiency": 0.954997094407353,
+      "match_rate": 0.9523809523809523
+    },
+    {
+      "bin_lo": 10.0,
+      "bin_hi": 20.0,
+      "n_tracks": 210,
+      "efficiency": 0.9623373086811762,
+      "match_rate": 0.9428571428571428
+    },
+    {
+      "bin_lo": 20.0,
+      "bin_hi": 50.0,
+      "n_tracks": 85,
+      "efficiency": 0.9884372243184129,
+      "match_rate": 0.9882352941176471
+    }
+  ],
+  "eta_bins": [
+    {
+      "bin_lo": -3.0,
+      "bin_hi": -2.5,
+      "n_tracks": 37,
+      "efficiency": 0.9436936936936938,
+      "match_rate": 0.3783783783783784
+    },
+    {
+      "bin_lo": -2.5,
+      "bin_hi": -2.0,
+      "n_tracks": 171,
+      "efficiency": 0.9219285288788015,
+      "match_rate": 0.6374269005847953
+    },
+    {
+      "bin_lo": -2.0,
+      "bin_hi": -1.5,
+      "n_tracks": 475,
+      "efficiency": 0.9056975931410519,
+      "match_rate": 0.7368421052631579
+    },
+    {
+      "bin_lo": -1.5,
+      "bin_hi": -1.0,
+      "n_tracks": 998,
+      "efficiency": 0.9103105681789466,
+      "match_rate": 0.7845691382765531
+    },
+    {
+      "bin_lo": -1.0,
+      "bin_hi": -0.5,
+      "n_tracks": 1759,
+      "efficiency": 0.8959895657359384,
+      "match_rate": 0.7663445139283684
+    },
+    {
+      "bin_lo": -0.5,
+      "bin_hi": 0.0,
+      "n_tracks": 2423,
+      "efficiency": 0.8428386318960401,
+      "match_rate": 0.7758976475443665
+    },
+    {
+      "bin_lo": 0.0,
+      "bin_hi": 0.5,
+      "n_tracks": 2271,
+      "efficiency": 0.8357100527884749,
+      "match_rate": 0.7793923381770145
+    },
+    {
+      "bin_lo": 0.5,
+      "bin_hi": 1.0,
+      "n_tracks": 2009,
+      "efficiency": 0.8984960277393667,
+      "match_rate": 0.7630662020905923
+    },
+    {
+      "bin_lo": 1.0,
+      "bin_hi": 1.5,
+      "n_tracks": 995,
+      "efficiency": 0.915819182444196,
+      "match_rate": 0.7316582914572864
+    },
+    {
+      "bin_lo": 1.5,
+      "bin_hi": 2.0,
+      "n_tracks": 460,
+      "efficiency": 0.9128091757963028,
+      "match_rate": 0.7543478260869565
+    },
+    {
+      "bin_lo": 2.0,
+      "bin_hi": 2.5,
+      "n_tracks": 163,
+      "efficiency": 0.9213594176193004,
+      "match_rate": 0.6932515337423313
+    },
+    {
+      "bin_lo": 2.5,
+      "bin_hi": 3.0,
+      "n_tracks": 44,
+      "efficiency": 0.9761994949494951,
+      "match_rate": 0.4318181818181818
+    }
+  ],
+  "nhit_bins": [
+    {
+      "bin_lo": 2,
+      "bin_hi": 5,
+      "n_tracks": 2601,
+      "efficiency": 0.8679674484172752,
+      "match_rate": 0.4286812764321415
+    },
+    {
+      "bin_lo": 5,
+      "bin_hi": 10,
+      "n_tracks": 904,
+      "efficiency": 0.8392023107177975,
+      "match_rate": 0.46349557522123896
+    },
+    {
+      "bin_lo": 10,
+      "bin_hi": 20,
+      "n_tracks": 606,
+      "efficiency": 0.8366384904092194,
+      "match_rate": 0.5693069306930693
+    },
+    {
+      "bin_lo": 20,
+      "bin_hi": 50,
+      "n_tracks": 1773,
+      "efficiency": 0.8908960311150784,
+      "match_rate": 0.8291032148900169
+    },
+    {
+      "bin_lo": 50,
+      "bin_hi": 100,
+      "n_tracks": 3045,
+      "efficiency": 0.93532517967451,
+      "match_rate": 0.9451559934318555
+    },
+    {
+      "bin_lo": 100,
+      "bin_hi": 200,
+      "n_tracks": 2228,
+      "efficiency": 0.9294882697769068,
+      "match_rate": 0.9654398563734291
+    },
+    {
+      "bin_lo": 200,
+      "bin_hi": 500,
+      "n_tracks": 534,
+      "efficiency": 0.6509341018537028,
+      "match_rate": 0.9363295880149812
+    }
+  ]
+}

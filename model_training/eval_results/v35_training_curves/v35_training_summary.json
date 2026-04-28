@@ -1,0 +1,10 @@
+{
+  "n_batches": 3561,
+  "n_epochs": 35,
+  "best_epoch": 35,
+  "best_match_rate": 0.722,
+  "final_match_rate": 0.722,
+  "final_train_loss": 0.5586,
+  "final_val_loss": 0.4847,
+  "total_training_hours": 133.43844444444443
+}
