@@ -46,7 +46,7 @@ inputs:
          - [rightPosition_y, null] # DC
          - [rightPosition_z, null] # DC
          - [hit_type, null] # VX DC
-         - [hit_cellID, null] # VX DC
+         # - [hit_cellID, null] # VX DC
         
    particle_features:
       length: 25000

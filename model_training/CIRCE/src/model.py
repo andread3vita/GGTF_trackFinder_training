@@ -139,9 +139,13 @@ class CGATrParquetModel(nn.Module):
 
         mv = mv.unsqueeze(1)  # (N, 1, 32) — single channel
 
-        # Torch-native block-diagonal mask (no xformers dependency)
-        mask = block_diagonal_bool_mask(seq_lens, device=features.device)
-        out_mv, _ = self.cgatr(mv, scalars=None, attention_mask=mask)
+        # Pass per-event hit counts rather than a dense (1,1,M,M) bool mask.
+        # The attention primitive runs block-diagonal attention as independent
+        # per-event SDPA, so it never allocates the O(M^2) score matrix (the big
+        # VRAM cost under the MATH backend that the large MV feature dim forces).
+        # A dense bool mask is still accepted by the primitive for back-compat;
+        # `block_diagonal_bool_mask` remains available for that path.
+        out_mv, _ = self.cgatr(mv, scalars=None, attention_mask=list(seq_lens))
         out = out_mv[:, 0, :]
 
         return torch.cat([self.clustering(out), self.beta(out)], dim=1)

@@ -22,7 +22,7 @@ import lightning as L
 import numpy as np
 import torch
 import torch.nn.functional as F
-from torch.optim.lr_scheduler import LambdaLR
+from torch.optim.lr_scheduler import LambdaLR, ReduceLROnPlateau
 
 from src.model import (
     CGATrParquetModel, object_condensation_loss,
@@ -372,6 +372,36 @@ class CGATrV35LightningModule(L.LightningModule):
             else self.args.warmup_epochs * steps_per_epoch
         )
 
+        # Stored for the manual warmup in optimizer_step (plateau schedule).
+        self._lr_schedule = str(getattr(self.args, "lr_schedule", "cosine"))
+        self._base_lr = float(self.args.start_lr)
+        self._warmup_steps = int(warmup_steps)
+
+        if self._lr_schedule == "plateau":
+            # Linear warmup (applied in optimizer_step) then drop-on-plateau:
+            # halve the LR after `patience` epochs without a val_loss
+            # improvement, down to min_lr. Adapts to the actual convergence
+            # curve, so it is robust when the run length / best schedule is not
+            # known up front (unlike cosine, which is pinned to --num_epochs and
+            # never reaches min_lr if you stop early). During warmup val_loss is
+            # still improving, so the plateau scheduler does not fire — no
+            # conflict with the manual warmup.
+            plateau = ReduceLROnPlateau(
+                optimizer, mode="min",
+                factor=float(getattr(self.args, "plateau_factor", 0.5)),
+                patience=int(getattr(self.args, "plateau_patience", 4)),
+                min_lr=float(self.args.min_lr),
+            )
+            return {
+                "optimizer": optimizer,
+                "lr_scheduler": {
+                    "scheduler": plateau,
+                    "interval": "epoch",
+                    "frequency": 1,
+                    "monitor": "val_loss",
+                },
+            }
+
         min_ratio = float(self.args.min_lr) / max(float(self.args.start_lr), 1e-12)
 
         def lr_lambda(step: int) -> float:
@@ -389,3 +419,15 @@ class CGATrV35LightningModule(L.LightningModule):
                 "frequency": 1,
             },
         }
+
+    def optimizer_step(self, epoch, batch_idx, optimizer, optimizer_closure):
+        # Manual linear warmup for the plateau schedule (the cosine schedule
+        # handles warmup inside its LambdaLR, so it is left untouched).
+        if getattr(self, "_lr_schedule", "cosine") == "plateau":
+            ws = getattr(self, "_warmup_steps", 0)
+            gs = self.trainer.global_step
+            if ws and gs < ws:
+                scale = float(gs + 1) / float(ws)
+                for pg in optimizer.param_groups:
+                    pg["lr"] = scale * self._base_lr
+        super().optimizer_step(epoch, batch_idx, optimizer, optimizer_closure)

@@ -185,7 +185,7 @@ def initialize(t):
     part_pid = ROOT.std.vector("float")()
 
     # cellID and other hit info
-    hit_cellID = ROOT.std.vector("int")()
+    # hit_cellID = ROOT.std.vector("int")()
     superLayer = ROOT.std.vector("float")()
     layer = ROOT.std.vector("float")()
     phi = ROOT.std.vector("float")()
@@ -220,7 +220,7 @@ def initialize(t):
     t.Branch("hit_type", hit_type)
     t.Branch("hit_EDep", hit_EDep)
     t.Branch("hit_time", hit_time)
-    t.Branch("hit_cellID", hit_cellID)
+    # t.Branch("hit_cellID", hit_cellID)
 
     t.Branch("hit_particle_index", hit_particle_index)
     t.Branch("part_p", part_p)
@@ -257,7 +257,7 @@ def initialize(t):
         "part_pid": part_pid,
         "part_id": part_id,
         "gen_status": gen_status,
-        "hit_cellID": hit_cellID,
+        # "hit_cellID": hit_cellID,
         "hit_x": hit_x,
         "hit_y": hit_y,
         "hit_z": hit_z,
@@ -482,7 +482,7 @@ def store_hit_col_SenseWireHits(
         layer = decoder.get(cellID, "layer")
         phi = decoder.get(cellID, "nphi")
         stereo = decoder.get(cellID, "stereosign")
-        dic["hit_cellID"].push_back(cellID)
+        # dic["hit_cellID"].push_back(cellID)
         dic["hit_EDep"].push_back(EDep)
         dic["hit_time"].push_back(time)
         dic["hit_pathLength"].push_back(pathLength)
@@ -525,7 +525,7 @@ def store_hit_col_PlanarHits(
             
             EDep = hit_digi.getEDep()
             time = hit_digi.getTime()
-            cellID = hit_sim.getCellID()
+            # cellID = hit_sim.getCellID()
 
             # digi hit
             position_digi = hit_digi.getPosition()
@@ -556,7 +556,7 @@ def store_hit_col_PlanarHits(
             htype = 1
            
             dic["produced_by_secondary"].push_back(1.0 * produced_by_secondary)
-            dic["hit_cellID"].push_back(cellID)
+            # dic["hit_cellID"].push_back(cellID)
             dic["hit_EDep"].push_back(EDep)
             dic["hit_time"].push_back(time)
             dic["hit_pathLength"].push_back(pathLength)

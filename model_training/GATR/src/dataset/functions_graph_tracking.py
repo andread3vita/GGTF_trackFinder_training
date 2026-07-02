@@ -257,13 +257,13 @@ def create_graph_tracking_global(output, fileID, eventID, get_vtx=False, vector=
                         (hit_type[mask_vtx], hit_type[mask_dc]), dim=0
                     )
 
-                    cellid = torch.cat(
-                        (
-                            features_hits[:, -1][mask_vtx].view(-1, 1),
-                            features_hits[:, -1][mask_dc].view(-1, 1),
-                        ),
-                        dim=0,
-                    )
+                    # cellid = torch.cat(
+                    #     (
+                    #         features_hits[:, -1][mask_vtx].view(-1, 1),
+                    #         features_hits[:, -1][mask_dc].view(-1, 1),
+                    #     ),
+                    #     dim=0,
+                    # )
 
                     produced_from_secondary_ = torch.cat(
                         (
@@ -308,14 +308,14 @@ def create_graph_tracking_global(output, fileID, eventID, get_vtx=False, vector=
                         (hit_type[mask_vtx], hit_type[mask_dc], hit_type[mask_dc]),
                         dim=0,
                     )
-                    cellid = torch.cat(
-                        (
-                            features_hits[:, -1][mask_vtx].view(-1, 1),
-                            features_hits[:, -1][mask_dc].view(-1, 1),
-                            features_hits[:, -1][mask_dc].view(-1, 1),
-                        ),
-                        dim=0,
-                    )
+                    # cellid = torch.cat(
+                    #     (
+                    #         features_hits[:, -1][mask_vtx].view(-1, 1),
+                    #         features_hits[:, -1][mask_dc].view(-1, 1),
+                    #         features_hits[:, -1][mask_dc].view(-1, 1),
+                    #     ),
+                    #     dim=0,
+                    # )
                     produced_from_secondary_ = torch.cat(
                         (
                             isProducedBySecondary[mask_vtx].view(-1, 1),
@@ -347,7 +347,7 @@ def create_graph_tracking_global(output, fileID, eventID, get_vtx=False, vector=
             g.ndata["particle_number_nomap"] = particle_number_nomap                        # original particle number with -1 for noise (not mapped to clusterID)
             g.ndata["particle_number_nomap_original"] = particle_number_nomap_original      # original particle number (not mapped to clusterID)
             g.ndata["pos_hits_xyz"] = pos_xyz
-            g.ndata["cellid"] = cellid
+            # g.ndata["cellid"] = cellid
             # g.ndata["is_overlay"] = is_overlay
             g.ndata["isSecondary"] = produced_from_secondary_
             

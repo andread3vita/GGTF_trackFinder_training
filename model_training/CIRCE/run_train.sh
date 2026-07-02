@@ -9,16 +9,17 @@ TRAIN_SEEDS=1-1000
 VAL_SEEDS=1001-1196
 NUM_EPOCHS=100
 NUM_DEVICES=4
-MAX_TOKENS=8000
+MAX_TOKENS=16000
 PRECISION=32-true
-GRAD_CKPT=1
+GRAD_CKPT=0
 CPU_THREADS=4
-NUM_WORKERS=8
-PREFETCH=4
+NUM_WORKERS=4
+PREFETCH=2
 CKPT_EVERY=200
 LIMIT_VAL=1
 WARMUP_EPOCHS=2
-START_LR=3e-4
+START_LR=4e-4
+LR_SCHEDULE=plateau
 
 # ---- Argument parsing ----
 while [[ $# -gt 0 ]]; do
@@ -39,6 +40,7 @@ while [[ $# -gt 0 ]]; do
     --limit_val)      LIMIT_VAL="$2";      shift 2 ;;
     --warmup_epochs)  WARMUP_EPOCHS="$2";  shift 2 ;;
     --start_lr)       START_LR="$2";       shift 2 ;;
+    --lr_schedule)    LR_SCHEDULE="$2";    shift 2 ;;
     *)                break ;;             # remaining args passed to train.py
   esac
 done
@@ -49,9 +51,10 @@ export POLARS_MAX_THREADS=$CPU_THREADS
 export MKL_NUM_THREADS=$CPU_THREADS
 export CGATR_DATALOADER_MP_CTX=spawn
 export CGATR_PIN_MEMORY=${CGATR_PIN_MEMORY:-1}
-export CGATR_PARQUET_CACHE_SIZE=${CGATR_PARQUET_CACHE_SIZE:-256}
+export CGATR_PARQUET_CACHE_SIZE=${CGATR_PARQUET_CACHE_SIZE:-16}
 export NCCL_P2P_LEVEL=${NCCL_P2P_LEVEL:-NVL}
 export PYTHONPATH=.
+export PYTORCH_CUDA_ALLOC_CONF=${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}
 
 GC_FLAG=""
 [[ "$GRAD_CKPT" == "1" ]] && GC_FLAG="--grad_checkpoint"
@@ -74,6 +77,7 @@ exec python -u src/train.py \
   --cpu_threads "$CPU_THREADS" \
   --start_lr "$START_LR" \
   --warmup_epochs "$WARMUP_EPOCHS" \
+  --lr_schedule "$LR_SCHEDULE" \
   --output_dir "$OUT_DIR" \
   --run_tag cgatr_fcc_prod \
   --ckpt_every_n_train_steps "$CKPT_EVERY" \

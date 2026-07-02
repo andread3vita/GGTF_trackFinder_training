@@ -15,11 +15,24 @@ from functools import partial
 from typing import Callable, Optional, Tuple
 
 import torch
+import torch._dynamo
 from einops import rearrange
 from torch import Tensor, nn
 from torch.nn.functional import scaled_dot_product_attention
 
 from src.gatr_v111.utils.tensors import to_nd
+
+# Optional xformers memory-efficient attention. Used for the packed-batch
+# training path: it is block-sparse and O(M) in memory (never materialises the
+# M x M score matrix), and it handles this model's large per-head feature dim
+# (~640). SDPA — which falls back to the O(M^2) MATH backend for that head dim —
+# is kept as the fallback and for single-event eval / ONNX export.
+try:
+    import xformers.ops as _xops
+    from xformers.ops.fmha import BlockDiagonalMask as _BlockDiagonalMask
+    _HAS_XFORMERS = True
+except Exception:  # pragma: no cover - xformers optional
+    _HAS_XFORMERS = False
 
 # MV size factor for normalization
 _MV_SIZE_FACTOR = 16  # Larger than PGA's 8 since we have 32 components
@@ -128,8 +141,9 @@ class geometric_attention(nn.Module):
     pass `None` for the channel counts and fall back to dynamic shape
     reads — those still work, they just emit the warnings.
 
-    SDPA-only: xformers removed. Uses torch.nn.functional.scaled_dot_product_attention
-    with a (1, 1, M, M) bool block-diagonal mask for packed multi-event batches.
+    Attention backend: xformers memory_efficient_attention (block-sparse, O(M)
+    memory) for packed multi-event training, with SDPA fallbacks. See the
+    dispatch in `forward` for details.
     """
 
     def __init__(self, basis_q, basis_k,
@@ -145,6 +159,12 @@ class geometric_attention(nn.Module):
         self.num_mv_channels_v = num_mv_channels_v
         self.num_s_channels_v = num_s_channels_v
 
+    # Exclude this method from any torch.compile graph: the xformers
+    # memory_efficient_attention backward kernel cannot be traced by Dynamo.
+    # `torch._dynamo.disable` is a no-op when the model is not compiled, so the
+    # eager path is unaffected; under compile it produces a graph break here
+    # and lets the rest of the model (linears, GP, layernorm) fuse and compile.
+    @torch._dynamo.disable
     def forward(
         self,
         q_mv: Tensor,
@@ -257,9 +277,64 @@ class geometric_attention(nn.Module):
         # Scale keys to correct for zero padding
         k = k * math.sqrt(num_channels / num_channels_qk)
 
-        # SDPA-only path: bool mask (True = attend) or None (dense).
-        # No xformers dependency — compatible with ONNX export.
-        v_out = scaled_dot_product_attention(q, k, v, attn_mask=attn_mask)
+        # Attention. Three accepted forms for `attn_mask`:
+        #   * None                 -> single dense self-attention (one event).
+        #   * bool (..., M, M)      -> legacy dense block-diagonal mask. Kept for
+        #                             back-compat; materialises the full M x M
+        #                             score matrix (O(M^2) memory).
+        #   * 1-D lengths / list    -> per-event hit counts (seq_lens). Block-
+        #                             diagonal attention is mathematically just
+        #                             independent dense attention per event, so
+        #                             we slice the item axis and run SDPA once
+        #                             per event. Peak memory becomes O(sum n_i^2)
+        #                             instead of O((sum n_i)^2).
+        #
+        # Why this matters here: the per-head feature dim is ~640 (32-blade MVs x
+        # channels), far above the 256-dim cap of the Flash / mem-efficient SDPA
+        # kernels, so SDPA always falls back to the MATH backend and materialises
+        # the dense score matrix. With packed batches (M up to max_tokens) the
+        # cross-event entries — which the mask only zeroes *after* allocation —
+        # dominate VRAM. Splitting per event removes them entirely (~8x less on
+        # realistic packed batches) and is numerically identical to the mask.
+        if attn_mask is None:
+            v_out = scaled_dot_product_attention(q, k, v)
+        elif torch.is_tensor(attn_mask) and attn_mask.dtype == torch.bool:
+            v_out = scaled_dot_product_attention(q, k, v, attn_mask=attn_mask)
+        else:
+            seq_lens = [int(n) for n in attn_mask]
+            # Leading (batch) dims must collapse to 1: the packed batch is a
+            # single sequence-set with all events along the item axis.
+            lead_numel = 1
+            for d in q.shape[:-3]:
+                lead_numel *= int(d)
+            Hq, M, C = q.shape[-3], q.shape[-2], q.shape[-1]
+
+            if _HAS_XFORMERS and lead_numel == 1 and len(seq_lens) >= 1:
+                # xformers wants (B, M, H, K). q is (.., H, M, C); k/v are
+                # (.., 1, M, C) under multi-query -> broadcast to H heads.
+                qx = q.reshape(Hq, M, C).permute(1, 0, 2).unsqueeze(0).contiguous()
+                kx = (k.reshape(k.shape[-3], M, C).permute(1, 0, 2)
+                      .unsqueeze(0).expand(1, M, Hq, C))
+                vx = (v.reshape(v.shape[-3], M, v.shape[-1]).permute(1, 0, 2)
+                      .unsqueeze(0).expand(1, M, Hq, v.shape[-1]))
+                bias = _BlockDiagonalMask.from_seqlens(seq_lens)
+                ox = _xops.memory_efficient_attention(qx, kx, vx, attn_bias=bias)
+                # (1, M, H, Cv) -> (.., H, M, Cv)
+                v_out = ox.squeeze(0).permute(1, 0, 2).reshape(*q.shape[:-1], v.shape[-1])
+            elif len(seq_lens) <= 1:
+                v_out = scaled_dot_product_attention(q, k, v)
+            else:
+                # Fallback (no xformers): per-event dense SDPA. Still avoids the
+                # cross-event O(M^2) blow-up — O(sum n_i^2) — but unlike xformers
+                # each event's score matrix is materialised (MATH backend).
+                outs = []
+                off = 0
+                for n in seq_lens:
+                    sl = slice(off, off + n)
+                    off += n
+                    outs.append(scaled_dot_product_attention(
+                        q[..., sl, :], k[..., sl, :], v[..., sl, :]))
+                v_out = torch.cat(outs, dim=-2)
 
         # Split output
         v_out_mv = rearrange(v_out[..., :num_mv_channels_v * 32], "... (c x) -> ... c x", x=32)
