@@ -27,6 +27,9 @@ def main():
     MAXSEED = sys.argv[5]                   # max seed
     OUTDIR = sys.argv[6]                    # path to the folder where the dataset will be saved
     KEY4HEP_VERSION = sys.argv[7]           # Key4hep version to use
+    K4GEO_PATH = sys.argv[8]                # k4geo path to use
+    K4FWCORE_PATH = sys.argv[9]             # k4fwcore path to use
+
 
     base_dir = find_project_root(Path(__file__).parent)
     main_dir = base_dir / f"data_creation/condor_pipeline/{DETECTOR}/"
@@ -63,7 +66,8 @@ def main():
             "--key4hep_version", KEY4HEP_VERSION
         ])
 
-    else:
+    elif TYPE.lower() == "nobackground":
+    
         subprocess.run([
             "python", f"{main_dir}/src/submit_jobs.py",
             "--mainDir", main_dir,
@@ -75,6 +79,20 @@ def main():
             "--key4hep_version", KEY4HEP_VERSION
         ])
 
+    elif TYPE.lower() == "background":
+
+        subprocess.run([
+            "python", f"{main_dir}/src/submit_jobs.py",
+            "--mainDir", main_dir,
+            "--queue", "testmatch",
+            "--outdir", outdir,
+            "--minseed", MINSEED,
+            "--maxseed", MAXSEED,
+            "--type", TRAIN_OR_VAL,
+            "--key4hep_version", KEY4HEP_VERSION,
+            "--k4geoPath", K4GEO_PATH,
+            "--k4fwcorePath", K4FWCORE_PATH
+        ])
 
 if __name__ == "__main__":
 

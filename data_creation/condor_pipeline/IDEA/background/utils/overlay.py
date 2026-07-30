@@ -20,6 +20,7 @@ from Gaudi.Configuration import INFO
 
 from k4FWCore import ApplicationMgr
 from k4FWCore import IOSvc
+from k4FWCore.parseArgs import parser
 from Configurables import EventDataSvc
 from Configurables import OverlayTiming
 from Configurables import UniqueIDGenSvc
@@ -27,48 +28,73 @@ from Configurables import UniqueIDGenSvc
 from pathlib import Path
 
 
-background_base = Path("/eos/experiment/fcc/ee/simulation/key4hep_2026_04_20/91GeV/IDEA_o1_v03/IPC_Z_background")
-background_file_list = []
-for d in sorted(background_base.iterdir()):
-    background_file_list.append(str(d))
-            
+parser.add_argument("--inputFile", required=True, help="Physics simulation input")
+parser.add_argument("--outputFile", required=True, help="Overlaid EDM4hep output")
+parser.add_argument(
+    "--backgroundFilesPath",
+    required=True,
+    help="Directory containing the background ROOT files",
+)
+parser.add_argument(
+    "--numEvents",
+    type=int,
+    default=-1,
+    help="Number of physics events to overlay; -1 processes all events",
+)
+args = parser.parse_args()
+
+background_base = Path(args.backgroundFilesPath).expanduser().resolve()
+if not background_base.is_dir():
+    raise RuntimeError(f"Background directory not found: {background_base}")
+
+background_file_list = sorted(
+    str(path.resolve())
+    for path in background_base.glob("*.root")
+    if path.is_file()
+)
+if not background_file_list:
+    raise RuntimeError(f"No .root background files found directly in {background_base}")
+
 id_service = UniqueIDGenSvc("UniqueIDGenSvc")
 eds = EventDataSvc("EventDataSvc")
 iosvc = IOSvc()
-# iosvc.Input = "/afs/cern.ch/user/a/aloeschc/fcc_fullsim_testing_grounds/data/IDEA/IDEA_o1_v03/physics_events/p8_ee_Z_qqbar_ud/1000_91.188GeV_ISR_FSR/000/IDEA_o1_v03_1000_p8_ee_Z_qqbar_ud_91.188GeV_ISR_FSR.root"
-iosvc.Input = "/afs/cern.ch/work/a/adevita/public/testBIB/bib-studies/outSim_399.root" 
-
-iosvc.Output = "IDEA_o1_v03_OverlayIPP_1000_p8_ee_Z_qqbar_ud_91.root"
+iosvc.Input = str(Path(args.inputFile).expanduser().resolve())
+iosvc.Output = str(Path(args.outputFile).expanduser().resolve())
 
 overlay = OverlayTiming()
+
 overlay.MCParticles = "MCParticles"
 overlay.BackgroundMCParticleCollectionName = "MCParticles"
-overlay.SimTrackerHits = ["DCHCollection", "MuonSystemCollection", "SiWrDCollection", "SiWrBCollection", "VertexBarrelCollection", "VertexEndcapCollection", "PreshowerSystemCollection"]
-overlay.SimCalorimeterHits = []
-overlay.OutputSimTrackerHits = ["OverlayDCHCollection", "OverlayMuonSystemCollection", "OverlaySiWrDCollection", "OverlaySiWrBCollection", "OverlayVertexBarrelCollection", "OverlayVertexEndcapCollection", "OverlayPreshowerSystemCollection"]
-overlay.OutputSimCalorimeterHits = []
 overlay.OutputMCParticles = "OverlayMCParticles"
+
+overlay.SimTrackerHits = ["DCHCollection", "MuonSystemCollection", "SiWrDCollection", "SiWrBCollection", "VertexBarrelCollection", "VertexEndcapCollection", "PreshowerSystemCollection"]
+overlay.OutputSimTrackerHits = ["OverlayDCHCollection", "OverlayMuonSystemCollection", "OverlaySiWrDCollection", "OverlaySiWrBCollection", "OverlayVertexBarrelCollection", "OverlayVertexEndcapCollection", "OverlayPreshowerSystemCollection"]
+
+overlay.SimCalorimeterHits = []
+overlay.OutputSimCalorimeterHits = []
 overlay.OutputCaloHitContributions = []
+
 # overlay.StartBackgroundEventIndex = 0
 overlay.AllowReusingBackgroundFiles = True
 overlay.CopyCellIDMetadata = True
-overlay.NBunchtrain = 41          # total BX in train
+overlay.NBunchtrain = 40          # 20 before, signal + background, 19 after
 overlay.NumberBackground = [1]    # one background event per BX
 overlay.Delta_t = 20              # ns between BX
-overlay.PhysicsBX = 21            # puts physics at 21 with 20 before & 30 after (allow for hits 200ns after event time)
+overlay.PhysicsBX = 21            # puts physics at BX 21, with offsets from -20 to +19 BX
 overlay.Poisson_random_NOverlay = [False]
 overlay.StartBackgroundEventIndex = -1
-overlay.BackgroundFileNames = [
-      background_file_list
-]
-overlay.TimeWindows = {"MCParticles": [-400, 400], "DCHCollection": [-400, 400], "MuonSystemCollection": [-20, 0], "SiWrDCollection": [-20, 0],"SiWrBCollection": [-20, 0], "VertexBarrelCollection": [-20, 0],"VertexEndcapCollection": [-20, 0], "PreshowerSystemCollection": [-20, 0]}
+overlay.BackgroundFileNames = [background_file_list]
+overlay.RandomMixBackgroundFiles = True
+
+overlay.TimeWindows = {"MCParticles": [-400, 400], "DCHCollection": [-400, 400], "MuonSystemCollection": [0, 20.], "SiWrDCollection": [0, 20.],"SiWrBCollection": [0, 20.], "VertexBarrelCollection": [0, 20.],"VertexEndcapCollection": [0, 20.], "PreshowerSystemCollection": [0, 20.]}
 
 iosvc.outputCommands = ["drop *", "keep OverlayDCHCollection*", "keep OverlaySiWrDCollection*", "keep OverlaySiWrBCollection*", "keep OverlayVertexBarrelCollection*", "keep OverlayVertexEndcapCollection*", "keep OverlayMC*", "keep *EventHeader*"]
 
 
-ApplicationMgr(TopAlg=[overlay],
-               EvtSel="NONE",
-               EvtMax=1,
-               ExtSvc=[eds],
-               OutputLevel=INFO,
-               )
+ApplicationMgr(
+    TopAlg=[overlay],
+    EvtSel="NONE",
+    EvtMax=args.numEvents,
+    ExtSvc=[eds, id_service],
+    OutputLevel=INFO,
+)

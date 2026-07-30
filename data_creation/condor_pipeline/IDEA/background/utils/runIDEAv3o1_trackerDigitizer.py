@@ -12,7 +12,15 @@ from k4FWCore.parseArgs import parser
 ################## Parser
 parser.add_argument("--inputFile", default = "ddsim_output_edm4hep.root", help = "InputFile")
 parser.add_argument("--outputFile", default = "output_digi.root", help = "OutputFile")
+parser.add_argument(
+    "--inputCollectionPrefix",
+    default="",
+    help="Prefix used by the input SimTrackerHit collections (for example, Overlay)",
+)
 args = parser.parse_args()
+
+def input_collection(name):
+    return f"{args.inputCollectionPrefix}{name}"
 
 # ################## InputOutput
 svc = IOSvc("IOSvc")
@@ -44,7 +52,7 @@ vtxb_digitizer.IsStrip = False
 vtxb_digitizer.ResolutionU = [innerVertexResolution_x, innerVertexResolution_x, innerVertexResolution_x, outerVertexResolution_x, outerVertexResolution_x]
 vtxb_digitizer.ResolutionV = [innerVertexResolution_y, innerVertexResolution_y, innerVertexResolution_y, outerVertexResolution_y, outerVertexResolution_y]
 vtxb_digitizer.ResolutionT = [innerVertexResolution_t, innerVertexResolution_t, innerVertexResolution_t, outerVertexResolution_t, outerVertexResolution_t]
-vtxb_digitizer.SimTrackHitCollectionName = ["VertexBarrelCollection"]
+vtxb_digitizer.SimTrackHitCollectionName = [input_collection("VertexBarrelCollection")]
 vtxb_digitizer.SimTrkHitRelCollection = ["VTXBSimDigiLinks"]
 vtxb_digitizer.TrackerHitCollectionName = ["VTXBDigis"]
 vtxb_digitizer.ForceHitsOntoSurface = True
@@ -55,7 +63,7 @@ vtxd_digitizer.IsStrip = False
 vtxd_digitizer.ResolutionU = [outerVertexResolution_x, outerVertexResolution_x, outerVertexResolution_x]
 vtxd_digitizer.ResolutionV = [outerVertexResolution_y, outerVertexResolution_y, outerVertexResolution_y]
 vtxd_digitizer.ResolutionT = [outerVertexResolution_t, outerVertexResolution_t, outerVertexResolution_t]
-vtxd_digitizer.SimTrackHitCollectionName = ["VertexEndcapCollection"]
+vtxd_digitizer.SimTrackHitCollectionName = [input_collection("VertexEndcapCollection")]
 vtxd_digitizer.SimTrkHitRelCollection = ["VTXDSimDigiLinks"]
 vtxd_digitizer.TrackerHitCollectionName = ["VTXDDigis"]
 vtxd_digitizer.ForceHitsOntoSurface = True
@@ -71,7 +79,7 @@ siwrb_digitizer.IsStrip = False
 siwrb_digitizer.ResolutionU = [siWrapperResolution_x, siWrapperResolution_x]
 siwrb_digitizer.ResolutionV = [siWrapperResolution_y, siWrapperResolution_y]
 siwrb_digitizer.ResolutionT = [siWrapperResolution_t, siWrapperResolution_t]
-siwrb_digitizer.SimTrackHitCollectionName = ["SiWrBCollection"]
+siwrb_digitizer.SimTrackHitCollectionName = [input_collection("SiWrBCollection")]
 siwrb_digitizer.SimTrkHitRelCollection = ["SiWrBSimDigiLinks"]
 siwrb_digitizer.TrackerHitCollectionName = ["SiWrBDigis"]
 siwrb_digitizer.ForceHitsOntoSurface = True
@@ -82,7 +90,7 @@ siwrd_digitizer.IsStrip = False
 siwrd_digitizer.ResolutionU = [siWrapperResolution_x, siWrapperResolution_x]
 siwrd_digitizer.ResolutionV = [siWrapperResolution_y, siWrapperResolution_y]
 siwrd_digitizer.ResolutionT = [siWrapperResolution_t, siWrapperResolution_t]
-siwrd_digitizer.SimTrackHitCollectionName = ["SiWrDCollection"]
+siwrd_digitizer.SimTrackHitCollectionName = [input_collection("SiWrDCollection")]
 siwrd_digitizer.SimTrkHitRelCollection = ["SiWrDSimDigiLinks"]
 siwrd_digitizer.TrackerHitCollectionName = ["SiWrDDigis"]
 siwrd_digitizer.ForceHitsOntoSurface = True
@@ -92,7 +100,7 @@ siwrd_digitizer.ForceHitsOntoSurface = True
 
 dch_digitizer = DCHdigi_v02(
     "DCHdigi2",
-    InputSimHitCollection=["DCHCollection"],
+    InputSimHitCollection=[input_collection("DCHCollection")],
     OutputDigihitCollection = ["DCH_DigiCollection"],
     OutputLinkCollection = ["DCH_DigiSimAssociationCollection"],
     DCH_name="DCH_v2",
@@ -108,11 +116,6 @@ dch_digitizer = DCHdigi_v02(
 )
 
 ############### Application Manager
-import subprocess
-
-ifilename = "https://fccsw.web.cern.ch/fccsw/filesForSimDigiReco/IDEA/DataAlgFORGEANT.root"
-subprocess.run(["wget", "--no-clobber", ifilename])
-
 mgr = ApplicationMgr(TopAlg = [dch_digitizer, vtxb_digitizer, vtxd_digitizer, siwrb_digitizer, siwrd_digitizer],
     EvtSel = "NONE",
     EvtMax = -1,

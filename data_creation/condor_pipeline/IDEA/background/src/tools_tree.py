@@ -32,8 +32,7 @@ def get_genparticle_parents(i, mcparts):
 
 def gen_particles_find(event, debug):
 
-    genparts = "MCParticles"
-    gen_part_coll = event.get(genparts)
+    gen_part_coll = event.get("OverlayMCParticles")
     genpart_indexes_pre = (
         dict()
     )  ## key: index in gen particle collection, value: position in stored gen particle array
@@ -193,6 +192,7 @@ def initialize(t):
     gen_status = ROOT.std.vector("float")()
     
     produced_by_secondary = ROOT.std.vector("float")()
+    isOverlay = ROOT.std.vector("float")()
 
     t.Branch("event_number", event_number, "event_number/I")
     t.Branch("n_hit", n_hit, "n_hit/I")
@@ -236,6 +236,7 @@ def initialize(t):
     t.Branch("stereo", stereo)
     t.Branch("part_parent", part_parent)
     t.Branch("produced_by_secondary", produced_by_secondary)
+    t.Branch("overlay", isOverlay)
 
     dic = {
         "hit_x_true": hit_x_true,
@@ -268,6 +269,7 @@ def initialize(t):
         "rightPosition_y": rightPosition_y,
         "rightPosition_z": rightPosition_z,
         "produced_by_secondary": produced_by_secondary,
+        "overlay": isOverlay,
         "cluster_count": cluster_count,
         "superLayer": superLayer,
         "layer": layer,
@@ -279,8 +281,14 @@ def initialize(t):
     return (event_number, n_hit, n_part, dic, t)
 
 
-def read_mc_collection(event, dic, n_part, debug, unique_MCS):
-    mc_particles = event.get("MCParticles")
+def read_mc_collection(
+    event,
+    dic,
+    n_part,
+    debug,
+    unique_MCS
+):
+    mc_particles = event.get("OverlayMCParticles")
     for jj, mc_particle in enumerate(mc_particles):
 
         pdg = mc_particle.getPDG()
@@ -440,6 +448,7 @@ def store_hit_col_SenseWireHits(
             raise ValueError(f"y_prime norm invalid! norm_y_prime={norm_y_prime}")
 
         cluster_count = digi_hit.getNClusters()
+        isOverlay = sim_hit.isOverlay()
 
         dic["hit_x"].push_back(wirePos[0])
         dic["hit_y"].push_back(wirePos[1])
@@ -472,11 +481,14 @@ def store_hit_col_SenseWireHits(
         dic["hit_pz"].push_back(pz)
 
         dic["produced_by_secondary"].push_back(1.0 * produced_by_secondary)
+        dic["overlay"].push_back(isOverlay)
 
         htype = 0
 
         # dummy example, cellid_encoding = "foo:2,bar:3,baz:-4"
-        cellid_encoding = metadata.get_parameter("DCHCollection__CellIDEncoding")
+        cellid_encoding = metadata.get_parameter(
+            f"{"OverlayDCHCollection"}__CellIDEncoding"
+        )
         decoder = dd4hep.BitFieldCoder(cellid_encoding)
         superLayer = decoder.get(cellID, "superlayer")
         layer = decoder.get(cellID, "layer")
@@ -543,7 +555,7 @@ def store_hit_col_PlanarHits(
 
 
             # sim hit
-
+            isOverlay = hit_sim.isOverlay()
             position_sim = hit_sim.getPosition()
             pathLength = hit_sim.getPathLength()
             momentum = hit_sim.getMomentum()
@@ -556,6 +568,7 @@ def store_hit_col_PlanarHits(
             htype = 1
            
             dic["produced_by_secondary"].push_back(1.0 * produced_by_secondary)
+            dic["overlay"].push_back(isOverlay)
             dic["hit_cellID"].push_back(cellID)
             dic["hit_EDep"].push_back(EDep)
             dic["hit_time"].push_back(time)

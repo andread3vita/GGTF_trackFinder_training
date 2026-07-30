@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-if [ "$#" -ne 7 ]; then
+if [ "$#" -ne 9 ]; then
 echo "Usage:"
-echo " $0 TRAIN_OR_VAL BACKGROUND DETECTOR MINSEED MAXSEED OUTDIR KEY4HEP_VERSION"
+echo " $0 TRAIN_OR_VAL BACKGROUND DETECTOR MINSEED MAXSEED OUTDIR KEY4HEP_VERSION K4GEO_PATH K4FWCORE_PATH"
 exit 1
 fi
 
@@ -13,6 +13,8 @@ MINSEED=$4
 MAXSEED=$5
 OUTDIR=$6
 KEY4HEP_VERSION=$7
+K4GEO_PATH=$8
+K4FWCORE_PATH=$9
 
 mkdir -p ${OUTDIR}
 mkdir -p ${OUTDIR}/digi/
@@ -35,3 +37,5 @@ python "${SCRIPT_DIR}/runDatasetCreation.py" \
     "${MAXSEED}" \
     "${OUTDIR}" \
     "${KEY4HEP_VERSION}" \
+    "${K4GEO_PATH}" \
+    "${K4FWCORE_PATH}"

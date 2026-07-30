@@ -166,3 +166,68 @@ else:
         if c_t != c_o:
             print(f"Point {i}: PyTorch={c_t.item()}, ONNX={c_o.item()}")
 
+# from podio import root_io
+
+# file1 = sys.argv[1]
+# podio_reader = root_io.Reader(file1)
+
+# def local_to_global(local_pos, x_prime, y_prime, z_prime, wire_pos):
+#     """
+#     Transforms local coordinates to global coordinates using the provided basis vectors.
+
+#     Parameters:
+#         local_pos (np.array): Local position vector [x, y, z].
+#         x_prime (np.array): x' axis unit vector.
+#         y_prime (np.array): y' axis unit vector.
+#         z_prime (np.array): z' axis unit vector.
+#         wire_pos (np.array): Wire position in global coordinates.
+
+#     Returns:
+#         np.array: Global position vector.
+#     """
+#     global_pos = x_prime * local_pos[0] + y_prime * local_pos[1] + z_prime * local_pos[2] + wire_pos
+#     return global_pos
+
+
+# for i, event in enumerate(podio_reader.get("events")):
+
+#     DCHCollection_links = event.get("DCH_DigiCollection")
+
+#     for digi_hit in DCHCollection_links:
+
+#         # digi_hit = link.getFrom()
+
+#         wirePos = digi_hit.getPosition()
+#         wirePos = np.array([wirePos[0],wirePos[1],wirePos[2]])
+    
+#         distanceToWire = digi_hit.getDistanceToWire()
+#         wire_azimuthal_angle = digi_hit.getWireAzimuthalAngle()
+#         wire_stereo_angle = digi_hit.getWireStereoAngle()
+        
+#         d_x = np.sin(wire_stereo_angle) * np.sin(wire_azimuthal_angle)
+#         d_y = -(np.sin(wire_stereo_angle) * np.cos(wire_azimuthal_angle))
+#         d_z = np.cos(wire_stereo_angle)    
+
+#         # z_prime
+#         z_prime = np.array([d_x, d_y, d_z])
+#         norm_z_prime = np.linalg.norm(z_prime)
+#         z_prime /= norm_z_prime
+
+#         # x_prime
+#         x_prime = np.array([1.0, 0.0, -d_x / d_z])
+#         norm_x_prime = np.linalg.norm(x_prime)
+#         x_prime /= norm_x_prime
+
+#         # y_prime (cross product)
+#         y_prime = np.cross(z_prime, x_prime)
+#         norm_y_prime = np.linalg.norm(y_prime)
+#         y_prime /= norm_y_prime
+
+#         # Conversion from local to global
+#         left_hit_local_position = np.array([-distanceToWire, 0.0, 0.0])
+#         right_hit_local_position = np.array([distanceToWire, 0.0, 0.0])
+            
+#         left_hit_global_position = local_to_global(left_hit_local_position, x_prime, y_prime, z_prime, wirePos)
+#         right_hit_global_position = local_to_global(right_hit_local_position, x_prime, y_prime, z_prime, wirePos)
+
+#         print("Hit Global Position (Left):", left_hit_global_position," Hit Global Position (Right):", right_hit_global_position)

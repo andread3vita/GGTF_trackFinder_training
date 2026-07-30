@@ -140,10 +140,6 @@ dch_digitizer = DCHdigi_v02(
 
 
 ############### Application Manager
-import subprocess
-
-ifilename = "https://fccsw.web.cern.ch/fccsw/filesForSimDigiReco/IDEA/DataAlgFORGEANT.root"
-subprocess.run(["wget", "--no-clobber", ifilename])
 
 mgr = ApplicationMgr(TopAlg = [dch_digitizer, VXDBarrelDigitizer, VXDEndcapDigitizer, SiWrBarrelDigitizer, SiWrEndcapDigitizer],
     EvtSel = "NONE",
