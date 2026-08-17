@@ -1,5 +1,4 @@
 import torch
-import torch.nn as nn
 import os
 import lightning as L
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -28,6 +27,7 @@ from xformers.ops.fmha import BlockDiagonalMask
 from src.gatr_v111.primitives.invariants import compute_inner_product_mask
 from src.gatr_v111.primitives.linear import _compute_pin_equi_linear_basis
 from src.gatr_v111.primitives.attention import _build_dist_basis
+from src.models.equivariant_io import EquivariantBatchNorm1d
 
 import wandb
 from src.logger.plotting_tools import (PlotCoordinates, efficiency_purity_plot, trackingEfficiencyPlot)
@@ -51,16 +51,19 @@ class ExampleWrapper(L.LightningModule):
         self.basis_q = None
         self.basis_k = None
         self.basis_gp_mask = None
-        self.ScaledGooeyBatchNorm2_1 = nn.BatchNorm1d(self.input_dim, momentum=0.1)
+        self.ScaledGooeyBatchNorm2_1 = EquivariantBatchNorm1d(momentum=0.1)
 
 
         self.load_basis()
+        # Object-condensation coordinates and beta are geometric scalars. Asking
+        # GATr for scalar outputs keeps them invariant; an unconstrained
+        # Linear(16, 4) over multivector blades does not.
         self.gatr = GATr(
             in_mv_channels=1,
             out_mv_channels=1,
             hidden_mv_channels=hidden_mv_channels,
             in_s_channels=None,
-            out_s_channels=None,
+            out_s_channels=self.output_dim,
             hidden_s_channels=hidden_s_channels,
             num_blocks=blocks,
             attention=SelfAttentionConfig(),
@@ -73,8 +76,6 @@ class ExampleWrapper(L.LightningModule):
             basis_gp_mask = self.basis_gp_mask, 
         )
 
-        self.clustering = nn.Linear(16, self.output_dim - 1, bias=False)
-        self.beta = nn.Linear(16, 1)
         self.vector_like_data = True
         self.df_batch_buffer = []
 
@@ -107,7 +108,11 @@ class ExampleWrapper(L.LightningModule):
         vector = input[:, 4:]
         
         inputs = self.ScaledGooeyBatchNorm2_1(pos_hits_xyz)
-        embedded_inputs = embed_point(inputs) + embed_scalar(hit_type) + embed_translation(vector)
+        embedded_inputs = (
+            embed_point(inputs)
+            + embed_scalar(hit_type)
+            + embed_translation(vector)
+        )
         # embedded_inputs = embed_point(inputs) + embed_scalar(hit_type)
 
 
@@ -115,15 +120,10 @@ class ExampleWrapper(L.LightningModule):
         scalars = torch.zeros((inputs.shape[0], 1), device=inputs.device, dtype=inputs.dtype)
         mask = self.build_attention_mask(g)
         
-        embedded_outputs, _ = self.gatr(
+        _, scalar_outputs = self.gatr(
             embedded_inputs, scalars=scalars, attention_mask=mask
         )
-        output = embedded_outputs[:, 0, :]
-        x_cluster_coord = self.clustering(output)
-        beta = self.beta(output)
-        x = torch.cat((x_cluster_coord, beta), dim=1)
-
-        return x
+        return scalar_outputs
 
     def build_attention_mask(self, g):
         """Construct attention mask from pytorch geometric batch.
