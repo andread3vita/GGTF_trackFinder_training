@@ -221,6 +221,15 @@ parser.add_argument(
     help="options to pass to the optimizer class constructor, e.g., `--optimizer-option weight_decay 1e-4`",
 )
 parser.add_argument(
+    "--loss-backend",
+    type=str,
+    default="circe",
+    choices=["circe", "ggtf"],
+    help="objective for the conformal (CGA) model: 'circe' (its own loss, default) "
+         "or 'ggtf' (the shared object-condensation loss, for algebra A/B runs). "
+         "Ignored by the GATR model.",
+)
+parser.add_argument(
     "--lr-scheduler",
     type=str,
     default="flat+decay",

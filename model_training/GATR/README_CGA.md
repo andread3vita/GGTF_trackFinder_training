@@ -70,9 +70,16 @@ By default the conformal model trains with CIRCE's own objective
 (`src/layers/losses_circe.py`): same logarithmic attraction and beta terms as
 the `hgcalimplementation` loss, hinge repulsion instead of Gaussian, plus two
 small regularisers (beta suppression 0.1, within-cluster variance 0.3). The
-conformal model trains noticeably better under it. For algebra-only A/B
-studies where both arms must share the exact same objective, set
-`args.loss_backend = "ggtf"` - `train_algebra_ab.py` already does.
+conformal model trains noticeably better under it. Switch from the command
+line:
+
+```bash
+--loss-backend circe   # default: CIRCE's objective
+--loss-backend ggtf    # shared object-condensation loss, for algebra A/B runs
+```
+
+(`train_algebra_ab.py` pins `ggtf` itself; the flag is ignored by the GATR
+model.)
 
 ## Checkpoint
 
