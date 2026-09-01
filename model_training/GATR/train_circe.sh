@@ -22,6 +22,7 @@ python -u -m src.train_algebra_ab \
   --algebra conformal \
   --loss_backend circe \
   --recipe circe \
+  --reference_width \
   --data_dir "$DATA" \
   --train_seeds 1-180 --val_seeds 181-190 \
   --epochs 30 \

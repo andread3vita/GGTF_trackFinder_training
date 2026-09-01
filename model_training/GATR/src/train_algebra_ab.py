@@ -147,6 +147,11 @@ def parse_args():
     p.add_argument("--recipe", default="ggtf", choices=["circe", "ggtf"],
                    help="optimizer recipe for the conformal arm; A/B default "
                         "'ggtf' keeps Adam+plateau on both arms.")
+    p.add_argument("--reference_width", action="store_true",
+                   help="run the conformal arm at CIRCE's reference width "
+                        "(16 mv channels) instead of the capacity-matched "
+                        "width; use for single-arm CIRCE training, never "
+                        "for paired A/B runs.")
     p.add_argument("--num_epochs_hint", type=int, default=0,
                    help="epochs the circe schedule plans for; defaults to --epochs")
     p.add_argument("--resume", default="",
@@ -172,7 +177,7 @@ def main():
     model_args = types.SimpleNamespace(
         loss_backend=a.loss_backend,
         recipe=a.recipe,
-        capacity_matched=True,  # A/B arms must match parameter count
+        capacity_matched=not a.reference_width,  # A/B default: match parameter count
         num_epochs=(a.num_epochs_hint or a.epochs),
         start_lr=a.start_lr,
         predict=False,          # keeps validation to the loss, no efficiency tables
