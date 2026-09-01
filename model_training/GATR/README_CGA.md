@@ -64,6 +64,16 @@ right) encoding discards.
     --output_dir <parquet_out> --split train
   ```
 
+## Loss
+
+By default the conformal model trains with CIRCE's own objective
+(`src/layers/losses_circe.py`): same logarithmic attraction and beta terms as
+the `hgcalimplementation` loss, hinge repulsion instead of Gaussian, plus two
+small regularisers (beta suppression 0.1, within-cluster variance 0.3). The
+conformal model trains noticeably better under it. For algebra-only A/B
+studies where both arms must share the exact same objective, set
+`args.loss_backend = "ggtf"` - `train_algebra_ab.py` already does.
+
 ## Checkpoint
 
 A trained checkpoint (IDEA v4 o1, 91 GeV Zqq) is available - it is too large

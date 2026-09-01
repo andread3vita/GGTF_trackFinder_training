@@ -51,6 +51,7 @@ THEIR_DEFAULTS = dict(
     fill_loss_weight=0.0,
     # Not in their parser; the loss signature's own defaults. See the module docstring.
     loss_type="hgcalimplementation",
+        loss_backend="ggtf",  # A/B arms must share the exact same objective
     use_average_cc_pos=0.0,
 )
 

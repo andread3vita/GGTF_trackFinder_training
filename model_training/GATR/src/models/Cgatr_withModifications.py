@@ -54,6 +54,7 @@ from src.layers.inference_oc_tracks import (
     store_at_batch_end_hits
 )
 from src.layers.losses import object_condensation_loss_tracking
+from src.layers.losses_circe import circe_condensation_loss
 from src.layers.batch_operations import obtain_batch_numbers
 
 from src.cgatr.nets.cgatr import CGATr
@@ -245,22 +246,30 @@ class ExampleWrapper(L.LightningModule):
 
         model_output = self(batch_g, input_)
 
-        (loss, losses) = object_condensation_loss_tracking(
-            batch_g,
-            model_output,
-            y,
-            clust_loss_only=True,
-            add_energy_loss=False,
-            calc_e_frac_loss=False,
-            q_min=self.args.qmin,
-            frac_clustering_loss=self.args.frac_cluster_loss,
-            attr_weight=self.args.L_attractive_weight,
-            repul_weight=self.args.L_repulsive_weight,
-            fill_loss_weight=self.args.fill_loss_weight,
-            use_average_cc_pos=self.args.use_average_cc_pos,
-            loss_type= self.args.loss_type,
-            tracking=True,
-        )
+        # CIRCE trains with its own objective by default; set
+        # args.loss_backend = "ggtf" for algebra-only A/B runs where both
+        # arms must share the exact same loss (train_algebra_ab does this).
+        if getattr(self.args, "loss_backend", "circe") == "circe":
+            (loss, losses) = circe_condensation_loss(
+                batch_g, model_output, y, self.args
+            )
+        else:
+            (loss, losses) = object_condensation_loss_tracking(
+                batch_g,
+                model_output,
+                y,
+                clust_loss_only=True,
+                add_energy_loss=False,
+                calc_e_frac_loss=False,
+                q_min=self.args.qmin,
+                frac_clustering_loss=self.args.frac_cluster_loss,
+                attr_weight=self.args.L_attractive_weight,
+                repul_weight=self.args.L_repulsive_weight,
+                fill_loss_weight=self.args.fill_loss_weight,
+                use_average_cc_pos=self.args.use_average_cc_pos,
+                loss_type= self.args.loss_type,
+                tracking=True,
+            )
 
         if torch.isnan(loss):
             print(f"Batch {batch_idx} returns NaN, skip.")
@@ -288,22 +297,30 @@ class ExampleWrapper(L.LightningModule):
         dic["graph"] = batch_g
         dic["part_true"] = y
 
-        (loss, losses) = object_condensation_loss_tracking(
-            batch_g,
-            model_output,
-            y,
-            clust_loss_only=True,
-            add_energy_loss=False,
-            calc_e_frac_loss=False,
-            q_min=self.args.qmin,
-            frac_clustering_loss=self.args.frac_cluster_loss,
-            attr_weight=self.args.L_attractive_weight,
-            repul_weight=self.args.L_repulsive_weight,
-            fill_loss_weight=self.args.fill_loss_weight,
-            use_average_cc_pos=self.args.use_average_cc_pos,
-            loss_type= self.args.loss_type,
-            tracking=True,
-        )
+        # CIRCE trains with its own objective by default; set
+        # args.loss_backend = "ggtf" for algebra-only A/B runs where both
+        # arms must share the exact same loss (train_algebra_ab does this).
+        if getattr(self.args, "loss_backend", "circe") == "circe":
+            (loss, losses) = circe_condensation_loss(
+                batch_g, model_output, y, self.args
+            )
+        else:
+            (loss, losses) = object_condensation_loss_tracking(
+                batch_g,
+                model_output,
+                y,
+                clust_loss_only=True,
+                add_energy_loss=False,
+                calc_e_frac_loss=False,
+                q_min=self.args.qmin,
+                frac_clustering_loss=self.args.frac_cluster_loss,
+                attr_weight=self.args.L_attractive_weight,
+                repul_weight=self.args.L_repulsive_weight,
+                fill_loss_weight=self.args.fill_loss_weight,
+                use_average_cc_pos=self.args.use_average_cc_pos,
+                loss_type= self.args.loss_type,
+                tracking=True,
+            )
         if self.trainer.is_global_zero:
             log_losses_wandb_tracking(True, batch_idx, 0, losses, loss, val=True)
 
