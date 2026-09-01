@@ -254,8 +254,8 @@ def circe_condensation_loss(batch_g, model_output, y, args):
     mc_index = batch_g.ndata["particle_number"].long()
     batch = obtain_batch_numbers(batch_g).long()
     total, components = object_condensation_loss(
-        beta,
         coords,
+        beta,
         mc_index,
         batch,
         noise_index=0,
