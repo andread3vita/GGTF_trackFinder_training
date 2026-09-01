@@ -44,8 +44,11 @@ right) encoding discards.
 - `src/cgatr/` - the CGA library (layers, primitives, interfaces, tests).
   Equivariance and geometry are covered by `src/cgatr/tests/test_cga.py`.
 - `src/models/Cgatr_withModifications.py` - the conformal LightningModule,
-  same structure as `Gatr_withModifications.py`, capacity-matched to it
-  within 1.4% so A/B comparisons are about the algebra and nothing else.
+  same structure as `Gatr_withModifications.py`. It ships at CIRCE's
+  reference width (16 mv channels, ~2M params - a CGA multivector has 32
+  components vs PGA's 16, so equal channels is not equal capacity). Pass
+  `--capacity-matched` to size it to GATR's 924,488 parameters (within
+  1.4%) for algebra A/B runs; `train_algebra_ab.py` does this itself.
 - `src/models/wrapper/model_tracking_cgatr.py` - the network config to pass
   via `--network-config`.
 - `src/dataset/parquet_ggtf_adapter.py` - feeds parquet datasets (see
