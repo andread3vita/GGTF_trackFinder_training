@@ -268,4 +268,13 @@ def circe_condensation_loss(batch_g, model_output, y, args):
         return_components=True,
         oc_mode="paper_hinge",
     )
-    return total, components
+    # the wandb logger indexes the components positionally, matching the
+    # tuple object_condensation_loss_tracking returns:
+    # [lv, lbeta, attractive, repulsive, beta_sig, beta_noise]
+    lv = components["L_V_att"] + components["L_V_rep"]
+    lbeta = (components["L_beta_sig"] + components["L_beta_noise"]
+             + components["L_beta_suppress"])
+    losses = [lv, lbeta,
+              components["L_V_att"], components["L_V_rep"],
+              components["L_beta_sig"], components["L_beta_noise"]]
+    return total, losses
