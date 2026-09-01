@@ -130,7 +130,10 @@ def object_condensation_loss(
     L_V_att = V_att_per_obj.mean()
 
     # --- Within-cluster variance regularizer (v35) ---
-    x_centroid = scatter_mean(sig_coords, object_index, dim=0)
+    # older torch_scatter (as in the gatr:v9 image) needs the index expanded
+    # to the source's shape for multi-column scatters
+    _idx2 = object_index.unsqueeze(1).expand(-1, sig_coords.size(1))
+    x_centroid = scatter_mean(sig_coords, _idx2, dim=0)
     d_sq_centroid = ((sig_coords - x_centroid[object_index]) ** 2).sum(dim=1)
     L_var_per_obj = scatter_mean(d_sq_centroid, object_index)
     L_var = L_var_per_obj.mean()
