@@ -19,6 +19,17 @@ Works in the same docker image as GATR (`dologarcia/gatr:v9`). The CGA
 product tables and equivariant bases are generated at first use, no extra
 files needed.
 
+## Reproduce our exact configuration
+
+```bash
+./train_circe.sh <parquet_dir> <output_dir>
+```
+
+runs the reference setup end to end (CIRCE loss, AdamW with warm-up and a
+half-cosine anneal, 16k-hit token batching). See the script header for the
+full settings; `--recipe ggtf` and `--loss-backend ggtf` fall back to the
+shared GATR-style training for A/B studies.
+
 ## Why conformal
 
 Drift-chamber hits are circles (wire position, wire direction, drift radius),

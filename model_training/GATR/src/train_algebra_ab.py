@@ -51,7 +51,6 @@ THEIR_DEFAULTS = dict(
     fill_loss_weight=0.0,
     # Not in their parser; the loss signature's own defaults. See the module docstring.
     loss_type="hgcalimplementation",
-        loss_backend="ggtf",  # A/B arms must share the exact same objective
     use_average_cc_pos=0.0,
 )
 
@@ -141,6 +140,15 @@ def parse_args():
                    help="0 means no limit; a small value gives a quick end-to-end check")
     p.add_argument("--limit_val_batches", type=int, default=0)
     p.add_argument("--max_events_per_seed", type=int, default=0)
+    p.add_argument("--loss_backend", default="ggtf", choices=["circe", "ggtf"],
+                   help="objective for the conformal arm; the A/B default is "
+                        "'ggtf' so both arms share one loss. 'circe' trains "
+                        "the conformal arm with its own objective.")
+    p.add_argument("--recipe", default="ggtf", choices=["circe", "ggtf"],
+                   help="optimizer recipe for the conformal arm; A/B default "
+                        "'ggtf' keeps Adam+plateau on both arms.")
+    p.add_argument("--num_epochs_hint", type=int, default=0,
+                   help="epochs the circe schedule plans for; defaults to --epochs")
     p.add_argument("--resume", default="",
                    help="checkpoint to resume from, or 'last'")
     return p.parse_args()
@@ -162,6 +170,9 @@ def main():
     os.makedirs(a.output_dir, exist_ok=True)
 
     model_args = types.SimpleNamespace(
+        loss_backend=a.loss_backend,
+        recipe=a.recipe,
+        num_epochs=(a.num_epochs_hint or a.epochs),
         start_lr=a.start_lr,
         predict=False,          # keeps validation to the loss, no efficiency tables
         tau=False,

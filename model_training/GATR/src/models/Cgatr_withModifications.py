@@ -386,6 +386,41 @@ class ExampleWrapper(L.LightningModule):
             )
 
     def configure_optimizers(self):
+        # CIRCE's reference recipe (the settings its results are reported
+        # with): AdamW + weight decay, 2 warm-up epochs, flat, then a
+        # half-cosine anneal to min_lr over the last anneal_epochs epochs.
+        # Select with --recipe circe (default for this model); --recipe ggtf
+        # keeps the original Adam + ReduceLROnPlateau below.
+        if getattr(self.args, "recipe", "circe") == "circe":
+            import math
+
+            optimizer = torch.optim.AdamW(
+                self.parameters(),
+                lr=self.args.start_lr,
+                weight_decay=float(getattr(self.args, "weight_decay", 1e-4)),
+            )
+            total = int(getattr(self.args, "num_epochs", 30))
+            warmup = int(getattr(self.args, "warmup_epochs", 2))
+            anneal = min(int(getattr(self.args, "anneal_epochs", 6)),
+                         max(total - warmup, 1))
+            start = total - anneal
+            min_frac = float(getattr(self.args, "min_lr", 1e-5)) / float(
+                self.args.start_lr)
+
+            def lr_lambda(epoch):
+                if epoch < warmup:
+                    return float(epoch + 1) / max(warmup, 1)
+                if epoch >= start:
+                    prog = min(max(float(epoch - start) / anneal, 0.0), 1.0)
+                    return min_frac + 0.5 * (1.0 - min_frac) * (
+                        1.0 + math.cos(math.pi * prog))
+                return 1.0
+
+            scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+            return {
+                "optimizer": optimizer,
+                "lr_scheduler": {"scheduler": scheduler, "interval": "epoch"},
+            }
 
         optimizer = torch.optim.Adam(self.parameters(), lr=self.args.start_lr)
 

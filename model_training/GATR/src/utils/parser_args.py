@@ -221,6 +221,15 @@ parser.add_argument(
     help="options to pass to the optimizer class constructor, e.g., `--optimizer-option weight_decay 1e-4`",
 )
 parser.add_argument(
+    "--recipe",
+    type=str,
+    default="circe",
+    choices=["circe", "ggtf"],
+    help="optimizer recipe for the conformal (CGA) model: 'circe' (AdamW, "
+         "warmup, half-cosine anneal - the reference settings) or 'ggtf' "
+         "(Adam + ReduceLROnPlateau). Ignored by the GATR model.",
+)
+parser.add_argument(
     "--loss-backend",
     type=str,
     default="circe",
