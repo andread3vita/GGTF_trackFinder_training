@@ -43,7 +43,7 @@ def run_arm(label: str, wrapper_module: str, g, inp, y, device):
     import importlib
 
     mod = importlib.import_module(wrapper_module)
-    args = types.SimpleNamespace(start_lr=1e-3, predict=False)
+    args = types.SimpleNamespace(start_lr=1e-3, predict=False, capacity_matched=True)
     model = mod.GraphTransformerNetWrapper(args, device).to(device)
     n_par = sum(p.numel() for p in model.parameters() if p.requires_grad)
 

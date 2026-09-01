@@ -22,7 +22,8 @@ readout heads take 32 inputs rather than 16. Unavoidable.
 
 *Width.* Equal `hidden_mv_channels` would hand the conformal arm far more parameters,
 because it has both twice the blades and 40 equivariant linear maps against 16. The
-width below is calibrated to match their parameter count instead; see `HIDDEN_MV`.
+width defaults to CIRCE's reference (16); `--capacity-matched` selects the width
+calibrated to their parameter count instead; see `HIDDEN_MV_MATCHED`.
 
 *Attention.* Theirs adds the hand-crafted distance features of `_build_dist_basis`,
 which exist because the projective inner product between two points is constant in
@@ -76,7 +77,8 @@ NUM_BLADES = 32
 # the steps being coarse because each conformal channel carries 32 blades and 40
 # equivariant maps. Recompute with `python -m src.models.report_algebra_params` if their
 # widths ever change; it prints both arms side by side and picks the match.
-HIDDEN_MV = 9
+HIDDEN_MV_REFERENCE = 16  # CIRCE's production width (what our results use)
+HIDDEN_MV_MATCHED = 9     # matches Gatr_withModifications' 924,488 params within 1.4%
 
 
 class ExampleWrapper(L.LightningModule):
@@ -96,11 +98,13 @@ class ExampleWrapper(L.LightningModule):
         # flag with default 16, so this is a live hazard rather than a hypothetical --
         # though the A/B runs through `src.train_lightning`, whose parser has no width
         # argument at all.
-        hidden_mv_channels = HIDDEN_MV
+        matched = bool(getattr(args, "capacity_matched", False))
+        hidden_mv_channels = HIDDEN_MV_MATCHED if matched else HIDDEN_MV_REFERENCE
         hidden_s_channels = 64
         print(f"[cgatr] conformal arm at hidden_mv_channels={hidden_mv_channels}, "
               f"blocks={blocks}, hidden_s_channels={hidden_s_channels} "
-              f"(capacity-matched to GGTF's projective 924,488 within 1.4%)")
+              + ("(capacity-matched to GGTF's projective 924,488 within 1.4%)"
+                 if matched else "(CIRCE reference width)"))
         self.input_dim = 3
         self.output_dim = 4
         self.args = args

@@ -172,6 +172,7 @@ def main():
     model_args = types.SimpleNamespace(
         loss_backend=a.loss_backend,
         recipe=a.recipe,
+        capacity_matched=True,  # A/B arms must match parameter count
         num_epochs=(a.num_epochs_hint or a.epochs),
         start_lr=a.start_lr,
         predict=False,          # keeps validation to the loss, no efficiency tables
