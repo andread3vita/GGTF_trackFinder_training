@@ -221,6 +221,31 @@ parser.add_argument(
     help="options to pass to the optimizer class constructor, e.g., `--optimizer-option weight_decay 1e-4`",
 )
 parser.add_argument(
+    "--capacity-matched",
+    action="store_true",
+    help="size the conformal (CGA) model to match Gatr_withModifications' "
+         "924,488 parameters (within 1.4%%) instead of CIRCE's reference "
+         "width, for algebra A/B runs. Ignored by the GATR model.",
+)
+parser.add_argument(
+    "--recipe",
+    type=str,
+    default="circe",
+    choices=["circe", "ggtf"],
+    help="optimizer recipe for the conformal (CGA) model: 'circe' (AdamW, "
+         "warmup, half-cosine anneal - the reference settings) or 'ggtf' "
+         "(Adam + ReduceLROnPlateau). Ignored by the GATR model.",
+)
+parser.add_argument(
+    "--loss-backend",
+    type=str,
+    default="circe",
+    choices=["circe", "ggtf"],
+    help="objective for the conformal (CGA) model: 'circe' (its own loss, default) "
+         "or 'ggtf' (the shared object-condensation loss, for algebra A/B runs). "
+         "Ignored by the GATR model.",
+)
+parser.add_argument(
     "--lr-scheduler",
     type=str,
     default="flat+decay",

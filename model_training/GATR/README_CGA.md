@@ -1,0 +1,102 @@
+# CGA (conformal) variant of the GGTF track finder
+
+This adds a Conformal Geometric Algebra (Cl(4,1)) version of the transformer
+that runs inside the existing GGTF pipeline. Nothing about the pipeline
+changes: same data, same loss, same trainer - you just point the network
+config at the conformal wrapper.
+
+## Run it
+
+Training, exactly like GATR but with one flag changed:
+
+```bash
+torchrun --nproc_per_node=4 -m src.train_lightning \
+  --network-config src/models/wrapper/model_tracking_cgatr.py \
+  ... everything else as in your usual GATR command ...
+```
+
+Works in the same docker image as GATR (`dologarcia/gatr:v9`). The CGA
+product tables and equivariant bases are generated at first use, no extra
+files needed.
+
+## Reproduce our exact configuration
+
+```bash
+./train_circe.sh <parquet_dir> <output_dir>
+```
+
+runs the reference setup end to end (CIRCE loss, AdamW with warm-up and a
+half-cosine anneal, 16k-hit token batching). See the script header for the
+full settings; `--recipe ggtf` and `--loss-backend ggtf` fall back to the
+shared GATR-style training for A/B studies.
+
+## Why conformal
+
+Drift-chamber hits are circles (wire position, wire direction, drift radius),
+and CGA represents circles, spheres and planes as native objects. Each drift
+hit enters the network as its actual measured circle instead of a point or a
+point pair, so the left/right ambiguity never has to be resolved upstream.
+The encoding provably keeps the wire direction, which the two-point (left,
+right) encoding discards.
+
+## What is in this PR
+
+- `src/cgatr/` - the CGA library (layers, primitives, interfaces, tests).
+  Equivariance and geometry are covered by `src/cgatr/tests/test_cga.py`.
+- `src/models/Cgatr_withModifications.py` - the conformal LightningModule,
+  same structure as `Gatr_withModifications.py`. It ships at CIRCE's
+  reference width (16 mv channels, ~2M params - a CGA multivector has 32
+  components vs PGA's 16, so equal channels is not equal capacity). Pass
+  `--capacity-matched` to size it to GATR's 924,488 parameters (within
+  1.4%) for algebra A/B runs; `train_algebra_ab.py` does this itself.
+- `src/models/wrapper/model_tracking_cgatr.py` - the network config to pass
+  via `--network-config`.
+- `src/dataset/parquet_ggtf_adapter.py` - feeds parquet datasets (see
+  converters below) into the standard DGL graph contract, byte-identical
+  inputs for both algebras.
+- `src/train_algebra_ab.py` + `src/models/smoke_algebra_ab.py` - a paired
+  A/B trainer and a five-minute integration check. The smoke test runs both
+  algebras forward and backward through the real loss on real events and
+  verifies they see identical inputs:
+
+  ```bash
+  python -m src.models.smoke_algebra_ab --data_dir <parquet_dir>
+  ```
+
+- `data_creation/edm4hep_to_parquet.py` - converts digitised edm4hep ROOT to
+  the parquet layout the adapter reads (per-seed directories with drift,
+  vertex/silicon and MC particle tables, full circle geometry per drift hit).
+- `data_creation/edm4hep_to_parquet_lowmem.py` - same output, streaming
+  writer. Use this one for keepAllParticles samples: their MC tables are
+  ~100k particles per event and the in-memory version needs tens of GB per
+  worker (we found out the hard way). Also writes through a .tmp rename so
+  interrupted conversions never leave a truncated file.
+
+  ```bash
+  python data_creation/edm4hep_to_parquet_lowmem.py \
+    --input_dir <dir with seed_N/digi_edm4hep/*.root> \
+    --output_dir <parquet_out> --split train
+  ```
+
+## Loss
+
+By default the conformal model trains with CIRCE's own objective
+(`src/layers/losses_circe.py`): same logarithmic attraction and beta terms as
+the `hgcalimplementation` loss, hinge repulsion instead of Gaussian, plus two
+small regularisers (beta suppression 0.1, within-cluster variance 0.3). The
+conformal model trains noticeably better under it. Switch from the command
+line:
+
+```bash
+--loss-backend circe   # default: CIRCE's objective
+--loss-backend ggtf    # shared object-condensation loss, for algebra A/B runs
+```
+
+(`train_algebra_ab.py` pins `ggtf` itself; the flag is ignored by the GATR
+model.)
+
+## Checkpoint
+
+A trained checkpoint (IDEA v4 o1, 91 GeV Zqq) is available - it is too large
+for the repo, ask us for the link and drop it wherever you like; the wrapper
+loads it through the normal Lightning mechanisms.
